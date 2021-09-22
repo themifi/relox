@@ -1,4 +1,6 @@
-use std::{env, fs, io, process, fmt};
+use std::{env, fs, io, process};
+
+mod lox;
 
 fn main() {
     let args = env::args();
@@ -71,15 +73,7 @@ impl Scanner {
         todo!();
     }
 
-    fn tokens(&self) -> Vec<Token> {
-        todo!();
-    }
-}
-
-enum Token {}
-
-impl fmt::Display for Token {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn tokens(&self) -> Vec<lox::Token> {
         todo!();
     }
 }
