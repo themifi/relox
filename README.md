@@ -15,9 +15,10 @@ More description [in the book](https://www.craftinginterpreters.com/the-lox-lang
 
 ## Path
 
-- [ ] Scanning
-- [ ] Parsing
-- [ ] Static analysis
+- [ ] Tree-walk interpreter
+  - [ ] Scanning
+  - [ ] Parsing
+  - [ ] Evaluating
 - [ ] Intermediate representation
 - [ ] Optimization
 - [ ] Code generation
