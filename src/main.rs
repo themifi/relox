@@ -1,6 +1,7 @@
 use std::{env, fs, io, process};
 
 mod lox;
+mod scanner;
 
 fn main() {
     let args = env::args();
@@ -16,7 +17,7 @@ fn main() {
 
 fn run_file(file: String) {
     let text  = fs::read_to_string(file).expect("file read failed");
-    run(text.as_str());
+    run(text);
     unsafe {
         if HAD_ERROR {
             process::exit(65);
@@ -26,27 +27,26 @@ fn run_file(file: String) {
 
 fn run_prompt() {
     let stdin = io::stdin();
-    let mut input = String::new();
     loop {
         print!("> ");
- 
+
+        let mut input = String::new();
         let bytes_read = stdin.read_line(&mut input).expect("read line failed");
         let eof = bytes_read == 0;
         if eof {
             break;
         }
 
-        run(input.as_ref());  
+        run(input);  
 
-        input.clear();
         unsafe {
             HAD_ERROR = false;
         }
     }
 }
 
-fn run(source: &str) {
-    let scanner = Scanner::new(source);
+fn run(source: String) {
+    let mut scanner = scanner::Scanner::new(source);
     let tokens = scanner.tokens();
     for token in tokens {
         println!("{}", token);
@@ -65,15 +65,3 @@ fn report(line: usize, place: &str, message: &str) {
 }
 
 static mut HAD_ERROR: bool = false;
-
-struct Scanner{}
-
-impl Scanner {
-    fn new(source: &str) -> Self {
-        todo!();
-    }
-
-    fn tokens(&self) -> Vec<lox::Token> {
-        todo!();
-    }
-}

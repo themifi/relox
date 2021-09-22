@@ -1,7 +1,7 @@
 use std::fmt;
 
 #[derive(Debug)]
-enum TokenType {
+pub enum TokenType {
     // Single-character tokens.
     LeftParen, RightParen, LeftBrace, RightBrace,
     Comma, Dot, Minus, Plus, Semicolon, Slash, Star,
@@ -23,10 +23,10 @@ enum TokenType {
 }
 
 pub struct Token {
-    t: TokenType,
-    lexeme: String,
-    literal: String,
-    line: usize,
+    pub t: TokenType,
+    pub lexeme: String,
+    pub literal: String,
+    pub line: usize,
 }
 
 impl fmt::Display for Token {
