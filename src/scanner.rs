@@ -54,6 +54,38 @@ impl Scanner {
             '+' => self.add_token(TokenType::Plus),
             ';' => self.add_token(TokenType::Semicolon),
             '*' => self.add_token(TokenType::Star),
+            '!' => {
+                let t = if self.match_char('=') {
+                    TokenType::BangEqual
+                } else {
+                    TokenType::Bang
+                };
+                self.add_token(t)
+            }
+            '=' => {
+                let t = if self.match_char('=') {
+                    TokenType::Equal
+                } else {
+                    TokenType::EqualEqual
+                };
+                self.add_token(t)
+            }
+            '<' => {
+                let t = if self.match_char('=') {
+                    TokenType::LessEqual
+                } else {
+                    TokenType::Less
+                };
+                self.add_token(t)
+            }
+            '>' => {
+                let t = if self.match_char('=') {
+                    TokenType::GreaterEqual
+                } else {
+                    TokenType::Greater
+                };
+                self.add_token(t)
+            }
             _ => error(self.line, format!("unexpected character {:?}", c)),
         };
     }
@@ -76,5 +108,14 @@ impl Scanner {
             lexeme,
             literal,
         })
+    }
+
+    fn match_char(&mut self, expected: char) -> bool {
+        if self.is_at_end() || self.source[self.current] != expected {
+            false
+        } else {
+            self.current += 1;
+            true
+        }
     }
 }
