@@ -1,4 +1,8 @@
-use std::{env, fs, io, process};
+use std::{
+    env, fs,
+    io::{self, Write},
+    process,
+};
 
 mod lox;
 mod scanner;
@@ -19,7 +23,7 @@ fn run_file(file: String) {
     let text = fs::read_to_string(file).expect("file read failed");
     run(text);
     unsafe {
-        if HAD_ERROR {
+        if lox::HAD_ERROR {
             process::exit(65);
         }
     }
@@ -29,6 +33,7 @@ fn run_prompt() {
     let stdin = io::stdin();
     loop {
         print!("> ");
+        io::stdout().flush().unwrap();
 
         let mut input = String::new();
         let bytes_read = stdin.read_line(&mut input).expect("read line failed");
@@ -40,28 +45,15 @@ fn run_prompt() {
         run(input);
 
         unsafe {
-            HAD_ERROR = false;
+            lox::HAD_ERROR = false;
         }
     }
 }
 
 fn run(source: String) {
     let mut scanner = scanner::Scanner::new(source);
-    let tokens = scanner.tokens();
+    let tokens = scanner.scan_tokens();
     for token in tokens {
         println!("{}", token);
     }
 }
-
-fn error(line: usize, message: &str) {
-    report(line, "", message);
-}
-
-fn report(line: usize, place: &str, message: &str) {
-    eprintln!("[line {}] Error{}: {}", line, place, message);
-    unsafe {
-        HAD_ERROR = true;
-    }
-}
-
-static mut HAD_ERROR: bool = false;
