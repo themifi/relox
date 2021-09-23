@@ -95,6 +95,8 @@ impl Scanner {
                     self.add_token(TokenType::Slash);
                 }
             }
+            ' ' | '\r' | '\t' => {}
+            '\n' => self.line += 1,
             _ => error(self.line, format!("unexpected character {:?}", c)),
         };
     }
