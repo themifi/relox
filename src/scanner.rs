@@ -1,6 +1,6 @@
 use super::lox::{Token, TokenType};
 
-pub struct Scanner{
+pub struct Scanner {
     source: Vec<char>,
     start: usize,
     current: usize,
@@ -10,10 +10,10 @@ pub struct Scanner{
 impl Scanner {
     pub fn new(source: String) -> Self {
         let chars = source.chars().collect();
-        Scanner { 
+        Scanner {
             source: chars,
-            start: 0, 
-            current: 0, 
+            start: 0,
+            current: 0,
             line: 1,
         }
     }
@@ -24,7 +24,7 @@ impl Scanner {
             self.start = self.current;
             self.scan_token();
         }
-        tokens.push(Token{
+        tokens.push(Token {
             t: TokenType::EOF,
             lexeme: String::new(),
             literal: String::new(),
