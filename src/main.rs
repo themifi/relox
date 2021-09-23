@@ -16,7 +16,7 @@ fn main() {
 }
 
 fn run_file(file: String) {
-    let text  = fs::read_to_string(file).expect("file read failed");
+    let text = fs::read_to_string(file).expect("file read failed");
     run(text);
     unsafe {
         if HAD_ERROR {
@@ -37,7 +37,7 @@ fn run_prompt() {
             break;
         }
 
-        run(input);  
+        run(input);
 
         unsafe {
             HAD_ERROR = false;
