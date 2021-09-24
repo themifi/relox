@@ -32,7 +32,7 @@ impl Scanner {
             self.scan_token();
         }
         self.tokens.push(Token {
-            t: TokenType::EOF,
+            t: TokenType::Eof,
             lexeme: String::new(),
             literal: String::new(),
             line: self.line,
@@ -135,7 +135,7 @@ impl Scanner {
     }
 
     fn add_literal_token(&mut self, t: TokenType, literal: String) {
-        let lexeme = self.source[self.start..self.current].into_iter().collect();
+        let lexeme = self.source[self.start..self.current].iter().collect();
         self.tokens.push(Token {
             line: self.line,
             t,
@@ -169,7 +169,7 @@ impl Scanner {
         self.advance();
 
         let value = &self.source[self.start + 1..self.current - 1];
-        let s = value.into_iter().collect();
+        let s = value.iter().collect();
         self.add_literal_token(TokenType::String, s);
     }
 
@@ -186,7 +186,7 @@ impl Scanner {
             }
         }
 
-        let literal = self.source[self.start..self.current].into_iter().collect();
+        let literal = self.source[self.start..self.current].iter().collect();
         self.add_literal_token(TokenType::Number, literal);
     }
 
@@ -195,7 +195,7 @@ impl Scanner {
             self.advance();
         }
 
-        let literal: String = self.source[self.start..self.current].into_iter().collect();
+        let literal: String = self.source[self.start..self.current].iter().collect();
         let t = self
             .keywords
             .get(literal.as_str())
@@ -206,11 +206,11 @@ impl Scanner {
 }
 
 fn is_digit(c: char) -> bool {
-    c >= '0' && c <= '9'
+    ('0'..'9').contains(&c)
 }
 
 fn is_alpha(c: char) -> bool {
-    c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c == '_'
+    ('a'..'z').contains(&c) || ('A'..'Z').contains(&c) || c == '_'
 }
 
 fn is_alpha_numeric(c: char) -> bool {
@@ -249,7 +249,7 @@ mod tests {
         let mut scanner = Scanner::new("// foo".to_owned());
         assert_eq!(
             vec![Token {
-                t: TokenType::EOF,
+                t: TokenType::Eof,
                 line: 1,
                 lexeme: String::new(),
                 literal: String::new(),
@@ -276,7 +276,7 @@ mod tests {
                     literal: String::new(),
                 },
                 Token {
-                    t: TokenType::EOF,
+                    t: TokenType::Eof,
                     line: 1,
                     lexeme: String::new(),
                     literal: String::new(),
@@ -304,7 +304,7 @@ mod tests {
                     literal: String::new(),
                 },
                 Token {
-                    t: TokenType::EOF,
+                    t: TokenType::Eof,
                     line: 1,
                     lexeme: String::new(),
                     literal: String::new(),
@@ -344,7 +344,7 @@ mod tests {
                     literal: String::new(),
                 },
                 Token {
-                    t: TokenType::EOF,
+                    t: TokenType::Eof,
                     line: 1,
                     lexeme: String::new(),
                     literal: String::new(),
@@ -408,7 +408,7 @@ mod tests {
                     literal: String::new(),
                 },
                 Token {
-                    t: TokenType::EOF,
+                    t: TokenType::Eof,
                     line: 1,
                     lexeme: String::new(),
                     literal: String::new(),
@@ -442,7 +442,7 @@ mod tests {
                     literal: String::new(),
                 },
                 Token {
-                    t: TokenType::EOF,
+                    t: TokenType::Eof,
                     line: 1,
                     lexeme: String::new(),
                     literal: String::new(),
@@ -464,7 +464,7 @@ mod tests {
                     literal: "foo".to_owned(),
                 },
                 Token {
-                    t: TokenType::EOF,
+                    t: TokenType::Eof,
                     line: 1,
                     lexeme: String::new(),
                     literal: String::new(),
@@ -486,7 +486,7 @@ mod tests {
                     literal: "123".to_owned(),
                 },
                 Token {
-                    t: TokenType::EOF,
+                    t: TokenType::Eof,
                     line: 1,
                     lexeme: String::new(),
                     literal: String::new(),
@@ -508,7 +508,7 @@ mod tests {
                     literal: "3.14".to_owned(),
                 },
                 Token {
-                    t: TokenType::EOF,
+                    t: TokenType::Eof,
                     line: 1,
                     lexeme: String::new(),
                     literal: String::new(),
@@ -536,7 +536,7 @@ mod tests {
                     literal: String::new(),
                 },
                 Token {
-                    t: TokenType::EOF,
+                    t: TokenType::Eof,
                     line: 1,
                     lexeme: String::new(),
                     literal: String::new(),
@@ -666,7 +666,7 @@ mod tests {
                     literal: String::new(),
                 },
                 Token {
-                    t: TokenType::EOF,
+                    t: TokenType::Eof,
                     line: 16,
                     lexeme: String::new(),
                     literal: String::new(),

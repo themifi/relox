@@ -8,14 +8,14 @@ mod lox;
 mod scanner;
 
 fn main() {
-    let args = env::args();
-    if args.len() > 2 {
-        println!("Usage: lox [script]");
-    } else if args.len() == 2 {
-        let file = args.skip(1).next().unwrap();
-        run_file(file);
-    } else {
-        run_prompt();
+    let mut args = env::args();
+    match args.len() {
+        n if n > 2 => println!("Usage: lox [script]"),
+        2 => {
+            let file = args.nth(1).unwrap();
+            run_file(file);
+        }
+        _ => run_prompt(),
     }
 }
 
