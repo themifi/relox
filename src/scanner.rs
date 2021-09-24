@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use super::lox::{error, Token, TokenType};
 
 pub struct Scanner {
@@ -6,6 +8,7 @@ pub struct Scanner {
     current: usize,
     line: usize,
     tokens: Vec<Token>,
+    keywords: HashMap<&'static str, TokenType>,
 }
 
 impl Scanner {
@@ -17,6 +20,7 @@ impl Scanner {
             current: 0,
             line: 1,
             tokens: Vec::new(),
+            keywords: keywords(),
         }
     }
 
@@ -99,6 +103,7 @@ impl Scanner {
             '\n' => self.line += 1,
             '"' => self.scan_string(),
             c if is_digit(c) => self.scan_number(),
+            c if is_alpha(c) => self.scan_identifier(),
             _ => error(self.line, format!("unexpected character {:?}", c)),
         };
     }
@@ -184,8 +189,53 @@ impl Scanner {
         let literal = self.source[self.start..self.current].into_iter().collect();
         self.add_literal_token(TokenType::Number, literal);
     }
+
+    fn scan_identifier(&mut self) {
+        while is_alpha_numeric(self.peek()) {
+            self.advance();
+        }
+
+        let literal: String = self.source[self.start..self.current].into_iter().collect();
+        let t = self
+            .keywords
+            .get(literal.as_str())
+            .unwrap_or(&TokenType::Identifier)
+            .clone();
+        self.add_literal_token(t, literal);
+    }
 }
 
 fn is_digit(c: char) -> bool {
     c >= '0' && c <= '9'
+}
+
+fn is_alpha(c: char) -> bool {
+    c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c == '_'
+}
+
+fn is_alpha_numeric(c: char) -> bool {
+    is_digit(c) || is_alpha(c)
+}
+
+fn keywords() -> HashMap<&'static str, TokenType> {
+    let mut m = HashMap::new();
+
+    m.insert("and", TokenType::And);
+    m.insert("class", TokenType::Class);
+    m.insert("else", TokenType::Else);
+    m.insert("false", TokenType::False);
+    m.insert("for", TokenType::For);
+    m.insert("fun", TokenType::Fun);
+    m.insert("if", TokenType::If);
+    m.insert("nil", TokenType::Nil);
+    m.insert("or", TokenType::Or);
+    m.insert("print", TokenType::Print);
+    m.insert("return", TokenType::Return);
+    m.insert("super", TokenType::Super);
+    m.insert("this", TokenType::This);
+    m.insert("true", TokenType::True);
+    m.insert("var", TokenType::Var);
+    m.insert("while", TokenType::While);
+
+    m
 }
