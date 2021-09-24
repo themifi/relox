@@ -64,9 +64,9 @@ impl Scanner {
             }
             '=' => {
                 let t = if self.match_char('=') {
-                    TokenType::Equal
-                } else {
                     TokenType::EqualEqual
+                } else {
+                    TokenType::Equal
                 };
                 self.add_token(t)
             }
