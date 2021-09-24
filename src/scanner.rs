@@ -97,6 +97,7 @@ impl Scanner {
             }
             ' ' | '\r' | '\t' => {}
             '\n' => self.line += 1,
+            '"' => self.scan_string(),
             _ => error(self.line, format!("unexpected character {:?}", c)),
         };
     }
@@ -136,5 +137,25 @@ impl Scanner {
             self.current += 1;
             true
         }
+    }
+
+    fn scan_string(&mut self) {
+        while self.peek() != '"' && !self.is_at_end() {
+            if self.peek() == '\n' {
+                self.line += 1;
+            }
+            self.advance();
+        }
+
+        if self.is_at_end() {
+            error(self.line, "unterminated string");
+            return;
+        }
+
+        self.advance();
+
+        let value = &self.source[self.start + 1..self.current - 1];
+        let s = value.into_iter().collect();
+        self.add_literal_token(TokenType::String, s);
     }
 }
