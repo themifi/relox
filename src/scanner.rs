@@ -98,6 +98,7 @@ impl Scanner {
             ' ' | '\r' | '\t' => {}
             '\n' => self.line += 1,
             '"' => self.scan_string(),
+            c if is_digit(c) => self.scan_number(),
             _ => error(self.line, format!("unexpected character {:?}", c)),
         };
     }
@@ -108,11 +109,19 @@ impl Scanner {
         c
     }
 
-    fn peek(&mut self) -> char {
+    fn peek(&self) -> char {
         if self.is_at_end() {
             '\0'
         } else {
             self.source[self.current]
+        }
+    }
+
+    fn peek_next(&self) -> char {
+        if self.current + 1 >= self.source.len() {
+            '\0'
+        } else {
+            self.source[self.current + 1]
         }
     }
 
@@ -158,4 +167,25 @@ impl Scanner {
         let s = value.into_iter().collect();
         self.add_literal_token(TokenType::String, s);
     }
+
+    fn scan_number(&mut self) {
+        while is_digit(self.peek()) {
+            self.advance();
+        }
+
+        if self.peek() == '.' && is_digit(self.peek_next()) {
+            self.advance();
+
+            while is_digit(self.peek()) {
+                self.advance();
+            }
+        }
+
+        let literal = self.source[self.start..self.current].into_iter().collect();
+        self.add_literal_token(TokenType::Number, literal);
+    }
+}
+
+fn is_digit(c: char) -> bool {
+    c >= '0' && c <= '9'
 }
