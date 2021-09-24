@@ -201,7 +201,7 @@ impl Scanner {
             .get(literal.as_str())
             .unwrap_or(&TokenType::Identifier)
             .clone();
-        self.add_literal_token(t, literal);
+        self.add_token(t);
     }
 }
 
@@ -238,4 +238,441 @@ fn keywords() -> HashMap<&'static str, TokenType> {
     m.insert("while", TokenType::While);
 
     m
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_scan_comment() {
+        let mut scanner = Scanner::new("// foo".to_owned());
+        assert_eq!(
+            vec![Token {
+                t: TokenType::EOF,
+                line: 1,
+                lexeme: String::new(),
+                literal: String::new(),
+            }],
+            scanner.scan_tokens()
+        );
+    }
+
+    #[test]
+    fn test_parans() {
+        let mut scanner = Scanner::new("()".to_owned());
+        assert_eq!(
+            vec![
+                Token {
+                    t: TokenType::LeftParen,
+                    line: 1,
+                    lexeme: "(".to_owned(),
+                    literal: String::new(),
+                },
+                Token {
+                    t: TokenType::RightParen,
+                    line: 1,
+                    lexeme: ")".to_owned(),
+                    literal: String::new(),
+                },
+                Token {
+                    t: TokenType::EOF,
+                    line: 1,
+                    lexeme: String::new(),
+                    literal: String::new(),
+                }
+            ],
+            scanner.scan_tokens()
+        );
+    }
+
+    #[test]
+    fn test_curly_braces() {
+        let mut scanner = Scanner::new("{}".to_owned());
+        assert_eq!(
+            vec![
+                Token {
+                    t: TokenType::LeftBrace,
+                    line: 1,
+                    lexeme: "{".to_owned(),
+                    literal: String::new(),
+                },
+                Token {
+                    t: TokenType::RightBrace,
+                    line: 1,
+                    lexeme: "}".to_owned(),
+                    literal: String::new(),
+                },
+                Token {
+                    t: TokenType::EOF,
+                    line: 1,
+                    lexeme: String::new(),
+                    literal: String::new(),
+                }
+            ],
+            scanner.scan_tokens()
+        );
+    }
+
+    #[test]
+    fn test_signs() {
+        let mut scanner = Scanner::new("+-*/".to_owned());
+        assert_eq!(
+            vec![
+                Token {
+                    t: TokenType::Plus,
+                    line: 1,
+                    lexeme: "+".to_owned(),
+                    literal: String::new(),
+                },
+                Token {
+                    t: TokenType::Minus,
+                    line: 1,
+                    lexeme: "-".to_owned(),
+                    literal: String::new(),
+                },
+                Token {
+                    t: TokenType::Star,
+                    line: 1,
+                    lexeme: "*".to_owned(),
+                    literal: String::new(),
+                },
+                Token {
+                    t: TokenType::Slash,
+                    line: 1,
+                    lexeme: "/".to_owned(),
+                    literal: String::new(),
+                },
+                Token {
+                    t: TokenType::EOF,
+                    line: 1,
+                    lexeme: String::new(),
+                    literal: String::new(),
+                }
+            ],
+            scanner.scan_tokens()
+        );
+    }
+
+    #[test]
+    fn test_comparators() {
+        let mut scanner = Scanner::new("< <= > >= ! != = ==".to_owned());
+        assert_eq!(
+            vec![
+                Token {
+                    t: TokenType::Less,
+                    line: 1,
+                    lexeme: "<".to_owned(),
+                    literal: String::new(),
+                },
+                Token {
+                    t: TokenType::LessEqual,
+                    line: 1,
+                    lexeme: "<=".to_owned(),
+                    literal: String::new(),
+                },
+                Token {
+                    t: TokenType::Greater,
+                    line: 1,
+                    lexeme: ">".to_owned(),
+                    literal: String::new(),
+                },
+                Token {
+                    t: TokenType::GreaterEqual,
+                    line: 1,
+                    lexeme: ">=".to_owned(),
+                    literal: String::new(),
+                },
+                Token {
+                    t: TokenType::Bang,
+                    line: 1,
+                    lexeme: "!".to_owned(),
+                    literal: String::new(),
+                },
+                Token {
+                    t: TokenType::BangEqual,
+                    line: 1,
+                    lexeme: "!=".to_owned(),
+                    literal: String::new(),
+                },
+                Token {
+                    t: TokenType::Equal,
+                    line: 1,
+                    lexeme: "=".to_owned(),
+                    literal: String::new(),
+                },
+                Token {
+                    t: TokenType::EqualEqual,
+                    line: 1,
+                    lexeme: "==".to_owned(),
+                    literal: String::new(),
+                },
+                Token {
+                    t: TokenType::EOF,
+                    line: 1,
+                    lexeme: String::new(),
+                    literal: String::new(),
+                }
+            ],
+            scanner.scan_tokens()
+        );
+    }
+
+    #[test]
+    fn test_punctuation() {
+        let mut scanner = Scanner::new(".,;".to_owned());
+        assert_eq!(
+            vec![
+                Token {
+                    t: TokenType::Dot,
+                    line: 1,
+                    lexeme: ".".to_owned(),
+                    literal: String::new(),
+                },
+                Token {
+                    t: TokenType::Comma,
+                    line: 1,
+                    lexeme: ",".to_owned(),
+                    literal: String::new(),
+                },
+                Token {
+                    t: TokenType::Semicolon,
+                    line: 1,
+                    lexeme: ";".to_owned(),
+                    literal: String::new(),
+                },
+                Token {
+                    t: TokenType::EOF,
+                    line: 1,
+                    lexeme: String::new(),
+                    literal: String::new(),
+                }
+            ],
+            scanner.scan_tokens()
+        );
+    }
+
+    #[test]
+    fn test_string_literal() {
+        let mut scanner = Scanner::new("\"foo\"".to_owned());
+        assert_eq!(
+            vec![
+                Token {
+                    t: TokenType::String,
+                    line: 1,
+                    lexeme: "\"foo\"".to_owned(),
+                    literal: "foo".to_owned(),
+                },
+                Token {
+                    t: TokenType::EOF,
+                    line: 1,
+                    lexeme: String::new(),
+                    literal: String::new(),
+                }
+            ],
+            scanner.scan_tokens()
+        );
+    }
+
+    #[test]
+    fn test_integer_number() {
+        let mut scanner = Scanner::new("123".to_owned());
+        assert_eq!(
+            vec![
+                Token {
+                    t: TokenType::Number,
+                    line: 1,
+                    lexeme: "123".to_owned(),
+                    literal: "123".to_owned(),
+                },
+                Token {
+                    t: TokenType::EOF,
+                    line: 1,
+                    lexeme: String::new(),
+                    literal: String::new(),
+                }
+            ],
+            scanner.scan_tokens()
+        );
+    }
+
+    #[test]
+    fn test_real_number() {
+        let mut scanner = Scanner::new("3.14".to_owned());
+        assert_eq!(
+            vec![
+                Token {
+                    t: TokenType::Number,
+                    line: 1,
+                    lexeme: "3.14".to_owned(),
+                    literal: "3.14".to_owned(),
+                },
+                Token {
+                    t: TokenType::EOF,
+                    line: 1,
+                    lexeme: String::new(),
+                    literal: String::new(),
+                }
+            ],
+            scanner.scan_tokens()
+        );
+    }
+
+    #[test]
+    fn test_identifiers() {
+        let mut scanner = Scanner::new("foo bar".to_owned());
+        assert_eq!(
+            vec![
+                Token {
+                    t: TokenType::Identifier,
+                    line: 1,
+                    lexeme: "foo".to_owned(),
+                    literal: String::new(),
+                },
+                Token {
+                    t: TokenType::Identifier,
+                    line: 1,
+                    lexeme: "bar".to_owned(),
+                    literal: String::new(),
+                },
+                Token {
+                    t: TokenType::EOF,
+                    line: 1,
+                    lexeme: String::new(),
+                    literal: String::new(),
+                }
+            ],
+            scanner.scan_tokens()
+        );
+    }
+
+    #[test]
+    fn test_keywords() {
+        let text = "and
+        class
+        else
+        false
+        for
+        fun
+        if
+        nil
+        or
+        print
+        return
+        super
+        this
+        true
+        var
+        while"
+            .to_owned();
+
+        let mut scanner = Scanner::new(text);
+        assert_eq!(
+            vec![
+                Token {
+                    t: TokenType::And,
+                    line: 1,
+                    lexeme: "and".to_owned(),
+                    literal: String::new(),
+                },
+                Token {
+                    t: TokenType::Class,
+                    line: 2,
+                    lexeme: "class".to_owned(),
+                    literal: String::new(),
+                },
+                Token {
+                    t: TokenType::Else,
+                    line: 3,
+                    lexeme: "else".to_owned(),
+                    literal: String::new(),
+                },
+                Token {
+                    t: TokenType::False,
+                    line: 4,
+                    lexeme: "false".to_owned(),
+                    literal: String::new(),
+                },
+                Token {
+                    t: TokenType::For,
+                    line: 5,
+                    lexeme: "for".to_owned(),
+                    literal: String::new(),
+                },
+                Token {
+                    t: TokenType::Fun,
+                    line: 6,
+                    lexeme: "fun".to_owned(),
+                    literal: String::new(),
+                },
+                Token {
+                    t: TokenType::If,
+                    line: 7,
+                    lexeme: "if".to_owned(),
+                    literal: String::new(),
+                },
+                Token {
+                    t: TokenType::Nil,
+                    line: 8,
+                    lexeme: "nil".to_owned(),
+                    literal: String::new(),
+                },
+                Token {
+                    t: TokenType::Or,
+                    line: 9,
+                    lexeme: "or".to_owned(),
+                    literal: String::new(),
+                },
+                Token {
+                    t: TokenType::Print,
+                    line: 10,
+                    lexeme: "print".to_owned(),
+                    literal: String::new(),
+                },
+                Token {
+                    t: TokenType::Return,
+                    line: 11,
+                    lexeme: "return".to_owned(),
+                    literal: String::new(),
+                },
+                Token {
+                    t: TokenType::Super,
+                    line: 12,
+                    lexeme: "super".to_owned(),
+                    literal: String::new(),
+                },
+                Token {
+                    t: TokenType::This,
+                    line: 13,
+                    lexeme: "this".to_owned(),
+                    literal: String::new(),
+                },
+                Token {
+                    t: TokenType::True,
+                    line: 14,
+                    lexeme: "true".to_owned(),
+                    literal: String::new(),
+                },
+                Token {
+                    t: TokenType::Var,
+                    line: 15,
+                    lexeme: "var".to_owned(),
+                    literal: String::new(),
+                },
+                Token {
+                    t: TokenType::While,
+                    line: 16,
+                    lexeme: "while".to_owned(),
+                    literal: String::new(),
+                },
+                Token {
+                    t: TokenType::EOF,
+                    line: 16,
+                    lexeme: String::new(),
+                    literal: String::new(),
+                },
+            ],
+            scanner.scan_tokens()
+        );
+    }
 }
