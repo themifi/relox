@@ -3,22 +3,16 @@ use std::collections::HashMap;
 use super::lox::{error, Token, TokenType};
 
 pub struct Scanner {
-    source: Vec<char>,
-    start: usize,
-    current: usize,
-    line: usize,
+    reader: Reader,
     tokens: Vec<Token>,
     keywords: HashMap<&'static str, TokenType>,
 }
 
 impl Scanner {
     pub fn new(source: String) -> Self {
-        let chars = source.chars().collect();
+        let reader = Reader::new(source);
         Scanner {
-            source: chars,
-            start: 0,
-            current: 0,
-            line: 1,
+            reader,
             tokens: Vec::new(),
             keywords: keywords(),
         }
@@ -27,26 +21,22 @@ impl Scanner {
     pub fn scan_tokens(&mut self) -> Vec<Token> {
         self.tokens.clear();
 
-        while !self.is_at_end() {
-            self.start = self.current;
+        while !self.reader.is_at_end() {
+            self.reader.set_start();
             self.scan_token();
         }
         self.tokens.push(Token {
             t: TokenType::Eof,
             lexeme: String::new(),
             literal: String::new(),
-            line: self.line,
+            line: self.reader.line(),
         });
 
         self.tokens.clone()
     }
 
-    fn is_at_end(&self) -> bool {
-        self.current >= self.source.len()
-    }
-
     fn scan_token(&mut self) {
-        let c = self.advance();
+        let c = self.reader.advance();
         match c {
             '(' => self.add_token(TokenType::LeftParen),
             ')' => self.add_token(TokenType::RightParen),
@@ -92,42 +82,19 @@ impl Scanner {
             }
             '/' => {
                 if self.match_char('/') {
-                    while self.peek() != '\n' && !self.is_at_end() {
-                        self.advance();
+                    while self.reader.peek() != '\n' && !self.reader.is_at_end() {
+                        self.reader.advance();
                     }
                 } else {
                     self.add_token(TokenType::Slash);
                 }
             }
-            ' ' | '\r' | '\t' => {}
-            '\n' => self.line += 1,
+            ' ' | '\r' | '\t' | '\n' => {}
             '"' => self.scan_string(),
             c if is_digit(c) => self.scan_number(),
             c if is_alpha(c) => self.scan_identifier(),
-            _ => error(self.line, format!("unexpected character {:?}", c)),
+            _ => error(self.reader.line(), format!("unexpected character {:?}", c)),
         };
-    }
-
-    fn advance(&mut self) -> char {
-        let c = self.source[self.current];
-        self.current += 1;
-        c
-    }
-
-    fn peek(&self) -> char {
-        if self.is_at_end() {
-            '\0'
-        } else {
-            self.source[self.current]
-        }
-    }
-
-    fn peek_next(&self) -> char {
-        if self.current + 1 >= self.source.len() {
-            '\0'
-        } else {
-            self.source[self.current + 1]
-        }
     }
 
     fn add_token(&mut self, t: TokenType) {
@@ -135,9 +102,9 @@ impl Scanner {
     }
 
     fn add_literal_token(&mut self, t: TokenType, literal: String) {
-        let lexeme = self.source[self.start..self.current].iter().collect();
+        let lexeme = self.reader.lexeme();
         self.tokens.push(Token {
-            line: self.line,
+            line: self.reader.line(),
             t,
             lexeme,
             literal,
@@ -145,57 +112,54 @@ impl Scanner {
     }
 
     fn match_char(&mut self, expected: char) -> bool {
-        if self.is_at_end() || self.source[self.current] != expected {
+        if self.reader.is_at_end() || self.reader.peek() != expected {
             false
         } else {
-            self.current += 1;
+            self.reader.advance();
             true
         }
     }
 
     fn scan_string(&mut self) {
-        while self.peek() != '"' && !self.is_at_end() {
-            if self.peek() == '\n' {
-                self.line += 1;
-            }
-            self.advance();
+        while self.reader.peek() != '"' && !self.reader.is_at_end() {
+            self.reader.advance();
         }
 
-        if self.is_at_end() {
-            error(self.line, "unterminated string");
+        if self.reader.is_at_end() {
+            error(self.reader.line(), "unterminated string");
             return;
         }
 
-        self.advance();
+        self.reader.advance();
 
-        let value = &self.source[self.start + 1..self.current - 1];
-        let s = value.iter().collect();
+        let value = self.reader.lexeme();
+        let s = value[1..value.len() - 1].to_owned();
         self.add_literal_token(TokenType::String, s);
     }
 
     fn scan_number(&mut self) {
-        while is_digit(self.peek()) {
-            self.advance();
+        while is_digit(self.reader.peek()) {
+            self.reader.advance();
         }
 
-        if self.peek() == '.' && is_digit(self.peek_next()) {
-            self.advance();
+        if self.reader.peek() == '.' && is_digit(self.reader.peek_next()) {
+            self.reader.advance();
 
-            while is_digit(self.peek()) {
-                self.advance();
+            while is_digit(self.reader.peek()) {
+                self.reader.advance();
             }
         }
 
-        let literal = self.source[self.start..self.current].iter().collect();
+        let literal = self.reader.lexeme();
         self.add_literal_token(TokenType::Number, literal);
     }
 
     fn scan_identifier(&mut self) {
-        while is_alpha_numeric(self.peek()) {
-            self.advance();
+        while is_alpha_numeric(self.reader.peek()) {
+            self.reader.advance();
         }
 
-        let literal: String = self.source[self.start..self.current].iter().collect();
+        let literal = self.reader.lexeme();
         let t = self
             .keywords
             .get(literal.as_str())
@@ -238,6 +202,66 @@ fn keywords() -> HashMap<&'static str, TokenType> {
     m.insert("while", TokenType::While);
 
     m
+}
+
+struct Reader {
+    chars: Vec<char>,
+    start: usize,
+    current: usize,
+    line: usize,
+}
+
+impl Reader {
+    fn new(source: String) -> Self {
+        let chars = source.chars().collect();
+        Self {
+            chars,
+            start: 0,
+            current: 0,
+            line: 1,
+        }
+    }
+
+    fn advance(&mut self) -> char {
+        let c = self.chars[self.current];
+        self.current += 1;
+        if c == '\n' {
+            self.line += 1;
+        }
+        c
+    }
+
+    fn peek(&self) -> char {
+        if self.is_at_end() {
+            '\0'
+        } else {
+            self.chars[self.current]
+        }
+    }
+
+    fn peek_next(&self) -> char {
+        if self.current + 1 >= self.chars.len() {
+            '\0'
+        } else {
+            self.chars[self.current + 1]
+        }
+    }
+
+    fn is_at_end(&self) -> bool {
+        self.current >= self.chars.len()
+    }
+
+    fn set_start(&mut self) {
+        self.start = self.current;
+    }
+
+    fn line(&self) -> usize {
+        self.line
+    }
+
+    fn lexeme(&self) -> String {
+        self.chars[self.start..self.current].iter().collect()
+    }
 }
 
 #[cfg(test)]
