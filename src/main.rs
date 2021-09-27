@@ -51,8 +51,8 @@ fn run_prompt() {
 }
 
 fn run(source: String) {
-    let mut scanner = scanner::Scanner::new(source);
-    let tokens = scanner.scan_tokens();
+    let scanner = scanner::Scanner::new();
+    let tokens = scanner.scan_tokens(source);
     for token in tokens {
         println!("{}", token);
     }

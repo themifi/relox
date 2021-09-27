@@ -3,169 +3,171 @@ use std::collections::HashMap;
 use super::lox::{error, Token, TokenType};
 
 pub struct Scanner {
-    reader: Reader,
-    tokens: Vec<Token>,
     keywords: HashMap<&'static str, TokenType>,
 }
 
 impl Scanner {
-    pub fn new(source: String) -> Self {
-        let reader = Reader::new(source);
+    pub fn new() -> Self {
         Scanner {
-            reader,
-            tokens: Vec::new(),
             keywords: keywords(),
         }
     }
 
-    pub fn scan_tokens(&mut self) -> Vec<Token> {
-        self.tokens.clear();
+    pub fn scan_tokens(&self, source: String) -> Vec<Token> {
+        let mut reader = Reader::new(source);
+        let mut tokens = Vec::new();
 
-        while !self.reader.is_at_end() {
-            self.reader.set_start();
-            self.scan_token();
+        while !reader.is_at_end() {
+            reader.set_start();
+            if let Some(token) = self.scan_token(&mut reader) {
+                tokens.push(token);
+            }
         }
-        self.tokens.push(Token {
+        tokens.push(Token {
             t: TokenType::Eof,
             lexeme: String::new(),
             literal: String::new(),
-            line: self.reader.line(),
+            line: reader.line(),
         });
 
-        self.tokens.clone()
+        tokens
     }
 
-    fn scan_token(&mut self) {
-        let c = self.reader.advance();
+    fn scan_token(&self, reader: &mut Reader) -> Option<Token> {
+        let c = reader.advance();
         match c {
-            '(' => self.add_token(TokenType::LeftParen),
-            ')' => self.add_token(TokenType::RightParen),
-            '{' => self.add_token(TokenType::LeftBrace),
-            '}' => self.add_token(TokenType::RightBrace),
-            ',' => self.add_token(TokenType::Comma),
-            '.' => self.add_token(TokenType::Dot),
-            '-' => self.add_token(TokenType::Minus),
-            '+' => self.add_token(TokenType::Plus),
-            ';' => self.add_token(TokenType::Semicolon),
-            '*' => self.add_token(TokenType::Star),
+            '(' => Some(Self::token(TokenType::LeftParen, reader)),
+            ')' => Some(Self::token(TokenType::RightParen, reader)),
+            '{' => Some(Self::token(TokenType::LeftBrace, reader)),
+            '}' => Some(Self::token(TokenType::RightBrace, reader)),
+            ',' => Some(Self::token(TokenType::Comma, reader)),
+            '.' => Some(Self::token(TokenType::Dot, reader)),
+            '-' => Some(Self::token(TokenType::Minus, reader)),
+            '+' => Some(Self::token(TokenType::Plus, reader)),
+            ';' => Some(Self::token(TokenType::Semicolon, reader)),
+            '*' => Some(Self::token(TokenType::Star, reader)),
             '!' => {
-                let t = if self.match_char('=') {
+                let t = if Self::match_char('=', reader) {
                     TokenType::BangEqual
                 } else {
                     TokenType::Bang
                 };
-                self.add_token(t)
+                Some(Self::token(t, reader))
             }
             '=' => {
-                let t = if self.match_char('=') {
+                let t = if Self::match_char('=', reader) {
                     TokenType::EqualEqual
                 } else {
                     TokenType::Equal
                 };
-                self.add_token(t)
+                Some(Self::token(t, reader))
             }
             '<' => {
-                let t = if self.match_char('=') {
+                let t = if Self::match_char('=', reader) {
                     TokenType::LessEqual
                 } else {
                     TokenType::Less
                 };
-                self.add_token(t)
+                Some(Self::token(t, reader))
             }
             '>' => {
-                let t = if self.match_char('=') {
+                let t = if Self::match_char('=', reader) {
                     TokenType::GreaterEqual
                 } else {
                     TokenType::Greater
                 };
-                self.add_token(t)
+                Some(Self::token(t, reader))
             }
             '/' => {
-                if self.match_char('/') {
-                    while self.reader.peek() != '\n' && !self.reader.is_at_end() {
-                        self.reader.advance();
+                if Self::match_char('/', reader) {
+                    while reader.peek() != '\n' && !reader.is_at_end() {
+                        reader.advance();
                     }
+                    None
                 } else {
-                    self.add_token(TokenType::Slash);
+                    Some(Self::token(TokenType::Slash, reader))
                 }
             }
-            ' ' | '\r' | '\t' | '\n' => {}
-            '"' => self.scan_string(),
-            c if is_digit(c) => self.scan_number(),
-            c if is_alpha(c) => self.scan_identifier(),
-            _ => error(self.reader.line(), format!("unexpected character {:?}", c)),
-        };
+            ' ' | '\r' | '\t' | '\n' => None,
+            '"' => Self::scan_string(reader),
+            c if is_digit(c) => Some(Self::scan_number(reader)),
+            c if is_alpha(c) => Some(self.scan_identifier(reader)),
+            _ => {
+                error(reader.line(), format!("unexpected character {:?}", c));
+                None
+            }
+        }
     }
 
-    fn add_token(&mut self, t: TokenType) {
-        self.add_literal_token(t, String::new())
+    fn token(t: TokenType, reader: &Reader) -> Token {
+        Self::literal_token(t, String::new(), reader)
     }
 
-    fn add_literal_token(&mut self, t: TokenType, literal: String) {
-        let lexeme = self.reader.lexeme();
-        self.tokens.push(Token {
-            line: self.reader.line(),
+    fn literal_token(t: TokenType, literal: String, reader: &Reader) -> Token {
+        let lexeme = reader.lexeme();
+        Token {
+            line: reader.line(),
             t,
             lexeme,
             literal,
-        })
+        }
     }
 
-    fn match_char(&mut self, expected: char) -> bool {
-        if self.reader.is_at_end() || self.reader.peek() != expected {
+    fn match_char(expected: char, reader: &mut Reader) -> bool {
+        if reader.is_at_end() || reader.peek() != expected {
             false
         } else {
-            self.reader.advance();
+            reader.advance();
             true
         }
     }
 
-    fn scan_string(&mut self) {
-        while self.reader.peek() != '"' && !self.reader.is_at_end() {
-            self.reader.advance();
+    fn scan_string(reader: &mut Reader) -> Option<Token> {
+        while reader.peek() != '"' && !reader.is_at_end() {
+            reader.advance();
         }
 
-        if self.reader.is_at_end() {
-            error(self.reader.line(), "unterminated string");
-            return;
+        if reader.is_at_end() {
+            error(reader.line(), "unterminated string");
+            return None;
         }
 
-        self.reader.advance();
+        reader.advance();
 
-        let value = self.reader.lexeme();
+        let value = reader.lexeme();
         let s = value[1..value.len() - 1].to_owned();
-        self.add_literal_token(TokenType::String, s);
+        Some(Self::literal_token(TokenType::String, s, reader))
     }
 
-    fn scan_number(&mut self) {
-        while is_digit(self.reader.peek()) {
-            self.reader.advance();
+    fn scan_number(reader: &mut Reader) -> Token {
+        while is_digit(reader.peek()) {
+            reader.advance();
         }
 
-        if self.reader.peek() == '.' && is_digit(self.reader.peek_next()) {
-            self.reader.advance();
+        if reader.peek() == '.' && is_digit(reader.peek_next()) {
+            reader.advance();
 
-            while is_digit(self.reader.peek()) {
-                self.reader.advance();
+            while is_digit(reader.peek()) {
+                reader.advance();
             }
         }
 
-        let literal = self.reader.lexeme();
-        self.add_literal_token(TokenType::Number, literal);
+        let literal = reader.lexeme();
+        Self::literal_token(TokenType::Number, literal, reader)
     }
 
-    fn scan_identifier(&mut self) {
-        while is_alpha_numeric(self.reader.peek()) {
-            self.reader.advance();
+    fn scan_identifier(&self, reader: &mut Reader) -> Token {
+        while is_alpha_numeric(reader.peek()) {
+            reader.advance();
         }
 
-        let literal = self.reader.lexeme();
+        let literal = reader.lexeme();
         let t = self
             .keywords
             .get(literal.as_str())
             .unwrap_or(&TokenType::Identifier)
             .clone();
-        self.add_token(t);
+        Self::token(t, reader)
     }
 }
 
@@ -270,7 +272,8 @@ mod tests {
 
     #[test]
     fn test_scan_comment() {
-        let mut scanner = Scanner::new("// foo".to_owned());
+        let scanner = Scanner::new();
+        let source = "// foo".to_owned();
         assert_eq!(
             vec![Token {
                 t: TokenType::Eof,
@@ -278,13 +281,13 @@ mod tests {
                 lexeme: String::new(),
                 literal: String::new(),
             }],
-            scanner.scan_tokens()
+            scanner.scan_tokens(source)
         );
     }
 
     #[test]
     fn test_parans() {
-        let mut scanner = Scanner::new("()".to_owned());
+        let scanner = Scanner::new();
         assert_eq!(
             vec![
                 Token {
@@ -306,13 +309,14 @@ mod tests {
                     literal: String::new(),
                 }
             ],
-            scanner.scan_tokens()
+            scanner.scan_tokens("()".to_owned())
         );
     }
 
     #[test]
     fn test_curly_braces() {
-        let mut scanner = Scanner::new("{}".to_owned());
+        let scanner = Scanner::new();
+        let source = "{}".to_owned();
         assert_eq!(
             vec![
                 Token {
@@ -334,13 +338,14 @@ mod tests {
                     literal: String::new(),
                 }
             ],
-            scanner.scan_tokens()
+            scanner.scan_tokens(source)
         );
     }
 
     #[test]
     fn test_signs() {
-        let mut scanner = Scanner::new("+-*/".to_owned());
+        let scanner = Scanner::new();
+        let source = "+-*/".to_owned();
         assert_eq!(
             vec![
                 Token {
@@ -374,13 +379,14 @@ mod tests {
                     literal: String::new(),
                 }
             ],
-            scanner.scan_tokens()
+            scanner.scan_tokens(source)
         );
     }
 
     #[test]
     fn test_comparators() {
-        let mut scanner = Scanner::new("< <= > >= ! != = ==".to_owned());
+        let scanner = Scanner::new();
+        let source = "< <= > >= ! != = ==".to_owned();
         assert_eq!(
             vec![
                 Token {
@@ -438,13 +444,14 @@ mod tests {
                     literal: String::new(),
                 }
             ],
-            scanner.scan_tokens()
+            scanner.scan_tokens(source)
         );
     }
 
     #[test]
     fn test_punctuation() {
-        let mut scanner = Scanner::new(".,;".to_owned());
+        let scanner = Scanner::new();
+        let source = ".,;".to_owned();
         assert_eq!(
             vec![
                 Token {
@@ -472,13 +479,14 @@ mod tests {
                     literal: String::new(),
                 }
             ],
-            scanner.scan_tokens()
+            scanner.scan_tokens(source)
         );
     }
 
     #[test]
     fn test_string_literal() {
-        let mut scanner = Scanner::new("\"foo\"".to_owned());
+        let scanner = Scanner::new();
+        let source = "\"foo\"".to_owned();
         assert_eq!(
             vec![
                 Token {
@@ -494,13 +502,14 @@ mod tests {
                     literal: String::new(),
                 }
             ],
-            scanner.scan_tokens()
+            scanner.scan_tokens(source)
         );
     }
 
     #[test]
     fn test_integer_number() {
-        let mut scanner = Scanner::new("123".to_owned());
+        let scanner = Scanner::new();
+        let source = "123".to_owned();
         assert_eq!(
             vec![
                 Token {
@@ -516,13 +525,14 @@ mod tests {
                     literal: String::new(),
                 }
             ],
-            scanner.scan_tokens()
+            scanner.scan_tokens(source)
         );
     }
 
     #[test]
     fn test_real_number() {
-        let mut scanner = Scanner::new("3.14".to_owned());
+        let scanner = Scanner::new();
+        let source = "3.14".to_owned();
         assert_eq!(
             vec![
                 Token {
@@ -538,13 +548,14 @@ mod tests {
                     literal: String::new(),
                 }
             ],
-            scanner.scan_tokens()
+            scanner.scan_tokens(source)
         );
     }
 
     #[test]
     fn test_identifiers() {
-        let mut scanner = Scanner::new("foo bar".to_owned());
+        let scanner = Scanner::new();
+        let source = "foo bar".to_owned();
         assert_eq!(
             vec![
                 Token {
@@ -566,13 +577,13 @@ mod tests {
                     literal: String::new(),
                 }
             ],
-            scanner.scan_tokens()
+            scanner.scan_tokens(source)
         );
     }
 
     #[test]
     fn test_keywords() {
-        let text = "and
+        let source = "and
         class
         else
         false
@@ -590,7 +601,7 @@ mod tests {
         while"
             .to_owned();
 
-        let mut scanner = Scanner::new(text);
+        let scanner = Scanner::new();
         assert_eq!(
             vec![
                 Token {
@@ -696,7 +707,7 @@ mod tests {
                     literal: String::new(),
                 },
             ],
-            scanner.scan_tokens()
+            scanner.scan_tokens(source)
         );
     }
 }
