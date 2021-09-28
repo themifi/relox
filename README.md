@@ -19,7 +19,7 @@ More description [in the book](https://www.craftinginterpreters.com/the-lox-lang
 ## Path
 
 - [ ] Tree-walk interpreter
-  - [ ] Scanning
+  - [x] Scanning
   - [ ] Parsing
   - [ ] Evaluating
 - [ ] Intermediate representation
