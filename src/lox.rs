@@ -65,15 +65,15 @@ impl fmt::Display for Token {
     }
 }
 
-pub fn error<T: AsRef<str>>(line: usize, message: T) {
-    report(line, "", message);
-}
-
-pub fn report<T: AsRef<str>>(line: usize, place: &str, message: T) {
-    eprintln!("[line {}] Error{}: {}", line, place, message.as_ref());
+pub fn report<T: fmt::Display>(e: T) {
+    eprintln!("{}", e);
     unsafe {
         HAD_ERROR = true;
     }
 }
 
 pub static mut HAD_ERROR: bool = false;
+
+pub fn format_error<T: AsRef<str>>(line: usize, message: T) -> String {
+    format!("[line {}] Error: {}", line, message.as_ref())
+}

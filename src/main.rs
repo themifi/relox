@@ -52,7 +52,12 @@ fn run_prompt() {
 
 fn run(source: String) {
     let scanner = scanner::Scanner::new();
-    let tokens = scanner.scan_tokens(source);
+    let result = scanner.scan_tokens(source);
+    if let Err(e) = result {
+        lox::report(e);
+        return;
+    }
+    let tokens = result.unwrap();
     for token in tokens {
         println!("{}", token);
     }
