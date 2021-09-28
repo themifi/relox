@@ -1,6 +1,6 @@
 use std::fmt;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum TokenType {
     // Single-character tokens.
     LeftParen,
@@ -48,9 +48,10 @@ pub enum TokenType {
     Var,
     While,
 
-    EOF,
+    Eof,
 }
 
+#[derive(Clone, Debug, PartialEq)]
 pub struct Token {
     pub t: TokenType,
     pub lexeme: String,
@@ -60,6 +61,19 @@ pub struct Token {
 
 impl fmt::Display for Token {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?} {} {}", self.t, self.lexeme, self.literal)
+        write!(f, "{:?} {} {:?}", self.t, self.lexeme, self.literal)
     }
+}
+
+pub fn report<T: fmt::Display>(e: T) {
+    eprintln!("{}", e);
+    unsafe {
+        HAD_ERROR = true;
+    }
+}
+
+pub static mut HAD_ERROR: bool = false;
+
+pub fn format_error<T: AsRef<str>>(line: usize, message: T) -> String {
+    format!("[line {}] Error: {}", line, message.as_ref())
 }
