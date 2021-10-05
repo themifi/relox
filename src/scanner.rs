@@ -1,6 +1,9 @@
 use std::{collections::HashMap, fmt};
 
-use super::lox::{format_error, Token, TokenType};
+use super::{
+    error::format_error,
+    token::{Token, TokenType},
+};
 
 pub struct Scanner {
     keywords: HashMap<&'static str, TokenType>,
