@@ -64,16 +64,3 @@ impl fmt::Display for Token {
         write!(f, "{:?} {} {:?}", self.t, self.lexeme, self.literal)
     }
 }
-
-pub fn report<T: fmt::Display>(e: T) {
-    eprintln!("{}", e);
-    unsafe {
-        HAD_ERROR = true;
-    }
-}
-
-pub static mut HAD_ERROR: bool = false;
-
-pub fn format_error<T: AsRef<str>>(line: usize, message: T) -> String {
-    format!("[line {}] Error: {}", line, message.as_ref())
-}

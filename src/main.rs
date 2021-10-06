@@ -4,8 +4,10 @@ use std::{
     process,
 };
 
-mod lox;
+mod error;
+mod expression;
 mod scanner;
+mod token;
 
 fn main() {
     let mut args = env::args();
@@ -23,7 +25,7 @@ fn run_file(file: String) {
     let text = fs::read_to_string(file).expect("file read failed");
     run(text);
     unsafe {
-        if lox::HAD_ERROR {
+        if error::HAD_ERROR {
             process::exit(65);
         }
     }
@@ -45,7 +47,7 @@ fn run_prompt() {
         run(input);
 
         unsafe {
-            lox::HAD_ERROR = false;
+            error::HAD_ERROR = false;
         }
     }
 }
@@ -54,7 +56,7 @@ fn run(source: String) {
     let scanner = scanner::Scanner::new();
     let result = scanner.scan_tokens(source);
     if let Err(e) = result {
-        lox::report(e);
+        error::report(e);
         return;
     }
     let tokens = result.unwrap();
