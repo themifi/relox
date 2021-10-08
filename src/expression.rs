@@ -1,30 +1,30 @@
 use super::token::Token;
 use std::fmt;
 
-struct Binary {
-    left: Box<dyn Expression>,
-    operator: Token,
-    right: Box<dyn Expression>,
+pub struct Binary {
+    pub left: Box<dyn Expression>,
+    pub operator: Token,
+    pub right: Box<dyn Expression>,
 }
 
-struct Grouping {
-    expr: Box<dyn Expression>,
+pub struct Grouping {
+    pub expr: Box<dyn Expression>,
 }
 
-struct Literal {
-    value: String,
+pub struct Literal {
+    pub value: String,
 }
 
-struct Unary {
-    operator: Token,
-    right: Box<dyn Expression>,
+pub struct Unary {
+    pub operator: Token,
+    pub right: Box<dyn Expression>,
 }
 
-trait Expression: fmt::Display {
+pub trait Expression: fmt::Display {
     fn accept(&self, visitor: &dyn Visitor);
 }
 
-trait Visitor {
+pub trait Visitor {
     fn visit_binary(&self, binary: &Binary);
     fn visit_grouping(&self, grouping: &Grouping);
     fn visit_literal(&self, literal: &Literal);
@@ -39,7 +39,7 @@ impl Expression for Binary {
 
 impl fmt::Display for Binary {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "({} {} {})", self.operator.lexeme, self.left, self.right)
+        write!(f, "({} {} {})", self.operator.t, self.left, self.right)
     }
 }
 
@@ -75,7 +75,7 @@ impl Expression for Unary {
 
 impl fmt::Display for Unary {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "({} {})", self.operator.lexeme, self.right)
+        write!(f, "({} {})", self.operator.t, self.right)
     }
 }
 
@@ -125,9 +125,9 @@ mod tests {
     fn test_format_unary() {
         let expr = Unary {
             operator: Token {
-                t: TokenType::Plus,
-                lexeme: "-".to_owned(),
-                literal: "-".to_owned(),
+                t: TokenType::Minus,
+                lexeme: String::new(),
+                literal: String::new(),
                 line: 1,
             },
             right: Box::new(Literal {
@@ -143,8 +143,8 @@ mod tests {
             left: Box::new(Unary {
                 operator: Token {
                     t: TokenType::Minus,
-                    lexeme: "-".to_owned(),
-                    literal: "-".to_owned(),
+                    lexeme: String::new(),
+                    literal: String::new(),
                     line: 1,
                 },
                 right: Box::new(Literal {
