@@ -54,7 +54,6 @@ pub enum TokenType {
 impl fmt::Display for TokenType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            // Single-character tokens.
             TokenType::LeftParen => write!(f, "("),
             TokenType::RightParen => write!(f, ")"),
             TokenType::LeftBrace => write!(f, "{{"),
@@ -67,7 +66,6 @@ impl fmt::Display for TokenType {
             TokenType::Slash => write!(f, "/"),
             TokenType::Star => write!(f, "*"),
 
-            // One or two character tokens.
             TokenType::Bang => write!(f, "!"),
             TokenType::BangEqual => write!(f, "!="),
             TokenType::Equal => write!(f, "="),
@@ -77,12 +75,10 @@ impl fmt::Display for TokenType {
             TokenType::Less => write!(f, "<"),
             TokenType::LessEqual => write!(f, "<="),
 
-            // Literals.
             TokenType::Identifier => write!(f, "identifier"),
             TokenType::String => write!(f, "string"),
             TokenType::Number => write!(f, "number"),
 
-            // Keywords.
             TokenType::And => write!(f, "and"),
             TokenType::Class => write!(f, "class"),
             TokenType::Else => write!(f, "else"),

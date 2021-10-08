@@ -1,26 +1,30 @@
 use super::token::Token;
 use std::fmt;
 
+#[derive(Debug)]
 pub struct Binary {
     pub left: Box<dyn Expression>,
     pub operator: Token,
     pub right: Box<dyn Expression>,
 }
 
+#[derive(Debug)]
 pub struct Grouping {
     pub expr: Box<dyn Expression>,
 }
 
+#[derive(Debug)]
 pub struct Literal {
     pub value: String,
 }
 
+#[derive(Debug)]
 pub struct Unary {
     pub operator: Token,
     pub right: Box<dyn Expression>,
 }
 
-pub trait Expression: fmt::Display {
+pub trait Expression: fmt::Display + fmt::Debug {
     fn accept(&self, visitor: &dyn Visitor);
 }
 
