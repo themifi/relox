@@ -7,8 +7,15 @@ use std::fmt;
 
 pub fn parse(tokens: Vec<Token>) -> Result {
     let mut reader = Reader::new(tokens);
+    parse_with_reader(&mut reader)
+}
 
-    expression(&mut reader)
+fn parse_with_reader(reader: &mut Reader) -> Result {
+    let result = expression(reader);
+    if result.is_err() {
+        syncronize(reader);
+    }
+    result
 }
 
 type Result = std::result::Result<Box<dyn Expression>, Error>;
@@ -140,7 +147,7 @@ fn primary(reader: &mut Reader) -> Result {
             }
             Ok(Box::new(Grouping { expr }))
         }
-        None => Err(Error::TermTokenExpected {
+        None => Err(Error::ExpressionExpected {
             line: reader.line(),
         }),
         _ => {
@@ -153,11 +160,32 @@ fn primary(reader: &mut Reader) -> Result {
     }
 }
 
+fn syncronize(reader: &mut Reader) {
+    loop {
+        match reader.peek_type() {
+            Some(TokenType::Semicolon) => {
+                reader.advance();
+                return;
+            }
+            Some(TokenType::Class)
+            | Some(TokenType::Fun)
+            | Some(TokenType::Var)
+            | Some(TokenType::For)
+            | Some(TokenType::If)
+            | Some(TokenType::While)
+            | Some(TokenType::Print)
+            | Some(TokenType::Return)
+            | None => break,
+            _ => reader.advance(),
+        };
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Error {
     RightParenExpected { line: usize },
     UnexpectedToken { line: usize, lexeme: String },
-    TermTokenExpected { line: usize },
+    ExpressionExpected { line: usize },
 }
 
 impl fmt::Display for Error {
@@ -167,7 +195,7 @@ impl fmt::Display for Error {
             Self::UnexpectedToken { line, ref lexeme } => {
                 format_error(line, format!("unexpected token: {}", lexeme))
             }
-            Self::TermTokenExpected { line } => format_error(line, "term token expected"),
+            Self::ExpressionExpected { line } => format_error(line, "expression expected"),
         };
         write!(f, "{}", msg)
     }
@@ -473,7 +501,7 @@ mod tests {
         ];
 
         let err = parse(tokens).unwrap_err();
-        assert_eq!(Error::TermTokenExpected { line: 3 }, err);
+        assert_eq!(Error::ExpressionExpected { line: 3 }, err);
     }
 
     #[test]
@@ -574,5 +602,73 @@ mod tests {
         assert_eq!(3, reader.line());
         assert_eq!(None, reader.peek_type());
         assert_eq!(None, reader.advance());
+    }
+
+    #[test]
+    fn test_syncronize_on_error_with_semicolon() {
+        let stop_token = Token {
+            t: TokenType::Number,
+            lexeme: String::new(),
+            literal: String::new(),
+            line: 3,
+        };
+        let tokens = vec![
+            Token {
+                t: TokenType::Plus,
+                lexeme: "+".to_owned(),
+                literal: String::new(),
+                line: 3,
+            },
+            Token {
+                t: TokenType::Number,
+                lexeme: String::new(),
+                literal: String::new(),
+                line: 3,
+            },
+            Token {
+                t: TokenType::Semicolon,
+                lexeme: String::new(),
+                literal: String::new(),
+                line: 3,
+            },
+            stop_token.clone(),
+        ];
+        let mut reader = Reader::new(tokens);
+
+        let res = parse_with_reader(&mut reader);
+
+        assert_eq!(true, res.is_err());
+        assert_eq!(Some(stop_token), reader.advance());
+    }
+
+    #[test]
+    fn test_syncronize_on_error_with_fun() {
+        let stop_token = Token {
+            t: TokenType::Fun,
+            lexeme: String::new(),
+            literal: String::new(),
+            line: 3,
+        };
+        let tokens = vec![
+            Token {
+                t: TokenType::Plus,
+                lexeme: "+".to_owned(),
+                literal: String::new(),
+                line: 3,
+            },
+            Token {
+                t: TokenType::Number,
+                lexeme: String::new(),
+                literal: String::new(),
+                line: 3,
+            },
+            stop_token.clone(),
+        ];
+        let mut reader = Reader::new(tokens);
+
+        let res = parse_with_reader(&mut reader);
+
+        assert_eq!(true, res.is_err());
+        assert_eq!(Some(stop_token), reader.advance());
     }
 }
