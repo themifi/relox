@@ -27,19 +27,14 @@ fn expression(reader: &mut Reader) -> Result {
 fn equality(reader: &mut Reader) -> Result {
     let mut expr = comparsion(reader)?;
 
-    loop {
-        match reader.peek_type() {
-            Some(TokenType::BangEqual) | Some(TokenType::EqualEqual) => {
-                let operator = reader.advance().unwrap();
-                let right = comparsion(reader)?;
-                expr = Box::new(Binary {
-                    left: expr,
-                    operator,
-                    right,
-                });
-            }
-            _ => break,
-        }
+    while let Some(TokenType::BangEqual) | Some(TokenType::EqualEqual) = reader.peek_type() {
+        let operator = reader.advance().unwrap();
+        let right = comparsion(reader)?;
+        expr = Box::new(Binary {
+            left: expr,
+            operator,
+            right,
+        });
     }
 
     Ok(expr)
@@ -48,22 +43,18 @@ fn equality(reader: &mut Reader) -> Result {
 fn comparsion(reader: &mut Reader) -> Result {
     let mut expr = term(reader)?;
 
-    loop {
-        match reader.peek_type() {
-            Some(TokenType::Greater)
-            | Some(TokenType::GreaterEqual)
-            | Some(TokenType::Less)
-            | Some(TokenType::LessEqual) => {
-                let operator = reader.advance().unwrap();
-                let right = term(reader)?;
-                expr = Box::new(Binary {
-                    left: expr,
-                    operator,
-                    right,
-                });
-            }
-            _ => break,
-        }
+    while let Some(TokenType::Greater)
+    | Some(TokenType::GreaterEqual)
+    | Some(TokenType::Less)
+    | Some(TokenType::LessEqual) = reader.peek_type()
+    {
+        let operator = reader.advance().unwrap();
+        let right = term(reader)?;
+        expr = Box::new(Binary {
+            left: expr,
+            operator,
+            right,
+        });
     }
 
     Ok(expr)
@@ -72,19 +63,14 @@ fn comparsion(reader: &mut Reader) -> Result {
 fn term(reader: &mut Reader) -> Result {
     let mut expr = factor(reader)?;
 
-    loop {
-        match reader.peek_type() {
-            Some(TokenType::Minus) | Some(TokenType::Plus) => {
-                let operator = reader.advance().unwrap();
-                let right = factor(reader)?;
-                expr = Box::new(Binary {
-                    left: expr,
-                    operator,
-                    right,
-                });
-            }
-            _ => break,
-        }
+    while let Some(TokenType::Minus) | Some(TokenType::Plus) = reader.peek_type() {
+        let operator = reader.advance().unwrap();
+        let right = factor(reader)?;
+        expr = Box::new(Binary {
+            left: expr,
+            operator,
+            right,
+        });
     }
 
     Ok(expr)
@@ -93,19 +79,14 @@ fn term(reader: &mut Reader) -> Result {
 fn factor(reader: &mut Reader) -> Result {
     let mut expr = unary(reader)?;
 
-    loop {
-        match reader.peek_type() {
-            Some(TokenType::Slash) | Some(TokenType::Star) => {
-                let operator = reader.advance().unwrap();
-                let right = unary(reader)?;
-                expr = Box::new(Binary {
-                    left: expr,
-                    operator,
-                    right,
-                });
-            }
-            _ => break,
-        }
+    while let Some(TokenType::Slash) | Some(TokenType::Star) = reader.peek_type() {
+        let operator = reader.advance().unwrap();
+        let right = unary(reader)?;
+        expr = Box::new(Binary {
+            left: expr,
+            operator,
+            right,
+        });
     }
 
     Ok(expr)
@@ -132,7 +113,7 @@ fn primary(reader: &mut Reader) -> Result {
         | Some(TokenType::String) => {
             let token = reader.advance().unwrap();
             let expr = Box::new(Literal {
-                value: token.literal.clone(),
+                value: token.literal,
             });
             Ok(expr)
         }
@@ -154,7 +135,7 @@ fn primary(reader: &mut Reader) -> Result {
             let token = reader.advance().unwrap();
             Err(Error::UnexpectedToken {
                 line: token.line,
-                lexeme: token.lexeme.clone(),
+                lexeme: token.lexeme,
             })
         }
     }

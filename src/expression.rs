@@ -37,7 +37,7 @@ pub trait Visitor {
 
 impl Expression for Binary {
     fn accept(&self, visitor: &dyn Visitor) {
-        visitor.visit_binary(&self);
+        visitor.visit_binary(self);
     }
 }
 
@@ -49,7 +49,7 @@ impl fmt::Display for Binary {
 
 impl Expression for Grouping {
     fn accept(&self, visitor: &dyn Visitor) {
-        visitor.visit_grouping(&self);
+        visitor.visit_grouping(self);
     }
 }
 
@@ -61,7 +61,7 @@ impl fmt::Display for Grouping {
 
 impl Expression for Literal {
     fn accept(&self, visitor: &dyn Visitor) {
-        visitor.visit_literal(&self);
+        visitor.visit_literal(self);
     }
 }
 
@@ -73,7 +73,7 @@ impl fmt::Display for Literal {
 
 impl Expression for Unary {
     fn accept(&self, visitor: &dyn Visitor) {
-        visitor.visit_unary(&self);
+        visitor.visit_unary(self);
     }
 }
 

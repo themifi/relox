@@ -172,9 +172,8 @@ impl Scanner {
         let t = self
             .keywords
             .get(literal.as_str())
-            .unwrap_or(&TokenType::Identifier)
-            .clone();
-        Self::token(t, reader)
+            .unwrap_or(&TokenType::Identifier);
+        Self::token(*t, reader)
     }
 }
 
