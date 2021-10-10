@@ -174,7 +174,7 @@ impl fmt::Display for Error {
         let msg = match *self {
             Self::RightParenExpected { line } => format_error(line, "expect ')' after expression"),
             Self::UnexpectedToken { line, ref lexeme } => {
-                format_error(line, format!("unexpected token: {}", lexeme))
+                format_error(line, format!("unexpected token: {:?}", lexeme))
             }
             Self::ExpressionExpected { line } => format_error(line, "expression expected"),
         };
@@ -651,5 +651,27 @@ mod tests {
 
         assert_eq!(true, res.is_err());
         assert_eq!(Some(stop_token), reader.advance());
+    }
+
+    #[test]
+    fn test_error_format() {
+        assert_eq!(
+            "[line 3] Error: expect ')' after expression",
+            format!("{}", Error::RightParenExpected { line: 3 })
+        );
+        assert_eq!(
+            "[line 3] Error: unexpected token: \"foo\"",
+            format!(
+                "{}",
+                Error::UnexpectedToken {
+                    line: 3,
+                    lexeme: "foo".to_owned()
+                }
+            )
+        );
+        assert_eq!(
+            "[line 3] Error: expression expected",
+            format!("{}", Error::ExpressionExpected { line: 3 })
+        );
     }
 }

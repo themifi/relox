@@ -754,4 +754,16 @@ mod tests {
             scanner.scan_tokens(source)
         );
     }
+
+    #[test]
+    fn test_error_format() {
+        assert_eq!(
+            "[line 3] Error: unterminated string",
+            format!("{}", Error::UnterminatedStringError { line: 3 })
+        );
+        assert_eq!(
+            "[line 4] Error: unexpected character '%'",
+            format!("{}", Error::UnexpectedCharacterError { line: 4, c: '%' })
+        );
+    }
 }
