@@ -225,7 +225,7 @@ mod tests {
     use super::{super::token::*, *};
 
     #[test]
-    fn test_parse_literals() {
+    fn test_primary_literals() {
         let literals = vec!["true", "false", "nil", r#""str""#, "123"];
 
         for literal in literals {
@@ -243,7 +243,35 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_unary_number() {
+    fn test_primary_grouping() {
+        let tokens = vec![
+            Token {
+                t: TokenType::LeftParen,
+                lexeme: String::new(),
+                literal: String::new(),
+                line: 1,
+            },
+            Token {
+                t: TokenType::Number,
+                lexeme: String::new(),
+                literal: "2".to_owned(),
+                line: 1,
+            },
+            Token {
+                t: TokenType::RightParen,
+                lexeme: String::new(),
+                literal: String::new(),
+                line: 1,
+            },
+        ];
+
+        let tree = parse(tokens).unwrap();
+
+        assert_eq!("(group 2)", format!("{}", tree));
+    }
+
+    #[test]
+    fn test_unary_number() {
         let tokens = vec![
             Token {
                 t: TokenType::Minus,
@@ -265,7 +293,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_unary_boolean() {
+    fn test_unary_boolean() {
         let tokens = vec![
             Token {
                 t: TokenType::Bang,
@@ -287,7 +315,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_binary() {
+    fn test_binary() {
         let operators = vec![
             TokenType::Star,
             TokenType::Slash,
