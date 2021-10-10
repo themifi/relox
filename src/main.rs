@@ -61,6 +61,9 @@ fn run(source: String) {
         return;
     }
     let tokens = result.unwrap();
-    let expression = parser::parse(tokens).unwrap();
-    println!("{}", expression);
+
+    match parser::parse(tokens) {
+        Ok(expression) => println!("{}", expression),
+        Err(err) => error::report(err),
+    };
 }
