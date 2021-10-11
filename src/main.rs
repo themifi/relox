@@ -6,6 +6,7 @@ use std::{
 
 mod error;
 mod expression;
+mod parser;
 mod scanner;
 mod token;
 
@@ -60,7 +61,9 @@ fn run(source: String) {
         return;
     }
     let tokens = result.unwrap();
-    for token in tokens {
-        println!("{}", token);
-    }
+
+    match parser::parse(tokens) {
+        Ok(expression) => println!("{}", expression),
+        Err(err) => error::report(err),
+    };
 }

@@ -16,11 +16,11 @@ The lox programming language:
 
 More description [in the book](https://www.craftinginterpreters.com/the-lox-language.html).
 
-## Path
+## Components
 
 - [ ] Tree-walk interpreter
   - [x] Scanning
-  - [ ] Parsing
+  - [x] Parsing
   - [ ] Evaluating
 - [ ] Intermediate representation
 - [ ] Optimization
