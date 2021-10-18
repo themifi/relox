@@ -1,3 +1,4 @@
+use interpreter::Interpreter;
 use std::{
     env, fs,
     io::{self, Write},
@@ -10,6 +11,7 @@ mod interpreter;
 mod parser;
 mod scanner;
 mod token;
+mod value;
 
 fn main() {
     let mut args = env::args();
@@ -29,6 +31,8 @@ fn run_file(file: String) {
     unsafe {
         if error::HAD_ERROR {
             process::exit(65);
+        } else if error::HAD_RUNTIME_ERROR {
+            process::exit(70);
         }
     }
 }
@@ -64,7 +68,10 @@ fn run(source: String) {
     let tokens = result.unwrap();
 
     match parser::parse(tokens) {
-        Ok(expression) => println!("{}", expression),
+        Ok(expression) => {
+            let interpreter = Interpreter::new();
+            interpreter.interpret(expression.as_ref());
+        }
         Err(err) => error::report(err),
     };
 }

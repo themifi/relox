@@ -1,7 +1,7 @@
 use super::{
     error::format_error,
     expression::{Binary, Expression, Grouping, Literal, Unary},
-    token::{Literal as TokenLiteral, Token, TokenType},
+    token::{Token, TokenType},
 };
 use std::fmt;
 
@@ -222,7 +222,10 @@ impl Reader {
 
 #[cfg(test)]
 mod tests {
-    use super::{super::token::*, *};
+    use super::{
+        super::token::{Literal as TokenLiteral, *},
+        *,
+    };
 
     #[test]
     fn test_parse_literals_true() {
@@ -300,19 +303,19 @@ mod tests {
             Token {
                 t: TokenType::LeftParen,
                 lexeme: String::new(),
-                literal: String::new(),
+                literal: None,
                 line: 1,
             },
             Token {
                 t: TokenType::Number,
                 lexeme: String::new(),
-                literal: "2".to_owned(),
+                literal: Some(TokenLiteral::Number(2.0)),
                 line: 1,
             },
             Token {
                 t: TokenType::RightParen,
                 lexeme: String::new(),
-                literal: String::new(),
+                literal: None,
                 line: 1,
             },
         ];

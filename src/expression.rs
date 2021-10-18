@@ -1,4 +1,6 @@
-use super::{token::Literal as TokenLiteral, token::Token};
+use crate::error::RuntimeError;
+
+use super::{token::Literal as TokenLiteral, token::Token, value::Value};
 use std::fmt;
 
 #[derive(Debug)]
@@ -25,19 +27,37 @@ pub struct Unary {
 }
 
 pub trait Expression: fmt::Display + fmt::Debug {
-    fn accept(&self, visitor: &dyn Visitor);
+    fn accept(&self, visitor: &dyn Visitor) -> Result<Value, RuntimeError>;
 }
 
 pub trait Visitor {
-    fn visit_binary(&self, binary: &Binary);
-    fn visit_grouping(&self, grouping: &Grouping);
-    fn visit_literal(&self, literal: &Literal);
-    fn visit_unary(&self, unary: &Unary);
+    fn visit_binary(&self, binary: &Binary) -> Result<Value, RuntimeError>;
+    fn visit_grouping(&self, grouping: &Grouping) -> Result<Value, RuntimeError>;
+    fn visit_literal(&self, literal: &Literal) -> Result<Value, RuntimeError>;
+    fn visit_unary(&self, unary: &Unary) -> Result<Value, RuntimeError>;
 }
 
 impl Expression for Binary {
-    fn accept(&self, visitor: &dyn Visitor) {
-        visitor.visit_binary(self);
+    fn accept(&self, visitor: &dyn Visitor) -> Result<Value, RuntimeError> {
+        visitor.visit_binary(&self)
+    }
+}
+
+impl Expression for Grouping {
+    fn accept(&self, visitor: &dyn Visitor) -> Result<Value, RuntimeError> {
+        visitor.visit_grouping(&self)
+    }
+}
+
+impl Expression for Literal {
+    fn accept(&self, visitor: &dyn Visitor) -> Result<Value, RuntimeError> {
+        visitor.visit_literal(&self)
+    }
+}
+
+impl Expression for Unary {
+    fn accept(&self, visitor: &dyn Visitor) -> Result<Value, RuntimeError> {
+        visitor.visit_unary(&self)
     }
 }
 
@@ -47,33 +67,15 @@ impl fmt::Display for Binary {
     }
 }
 
-impl Expression for Grouping {
-    fn accept(&self, visitor: &dyn Visitor) {
-        visitor.visit_grouping(self);
-    }
-}
-
 impl fmt::Display for Grouping {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "(group {})", self.expr)
     }
 }
 
-impl Expression for Literal {
-    fn accept(&self, visitor: &dyn Visitor) {
-        visitor.visit_literal(self);
-    }
-}
-
 impl fmt::Display for Literal {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.value)
-    }
-}
-
-impl Expression for Unary {
-    fn accept(&self, visitor: &dyn Visitor) {
-        visitor.visit_unary(self);
     }
 }
 
