@@ -1,4 +1,3 @@
-use interpreter::Interpreter;
 use std::{
     env, fs,
     io::{self, Write},
@@ -8,6 +7,7 @@ use std::{
 mod error;
 mod expression;
 mod interpreter;
+mod lox;
 mod parser;
 mod scanner;
 mod token;
@@ -59,19 +59,9 @@ fn run_prompt() {
 }
 
 fn run(source: String) {
-    let scanner = scanner::Scanner::new();
-    let result = scanner.scan_tokens(source);
+    let lox = lox::Lox::new();
+    let result = lox.run(source);
     if let Err(e) = result {
         error::report(e);
-        return;
     }
-    let tokens = result.unwrap();
-
-    match parser::parse(tokens) {
-        Ok(expression) => {
-            let interpreter = Interpreter::new();
-            interpreter.interpret(expression.as_ref());
-        }
-        Err(err) => error::report(err),
-    };
 }
