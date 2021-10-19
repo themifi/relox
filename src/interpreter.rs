@@ -1,5 +1,5 @@
 use super::{
-    error::{runtime_error, RuntimeError},
+    error::RuntimeError,
     expression::{Binary, Expression, Grouping, Literal, Unary, Visitor},
     token::{Literal as TokenLiteral, Token, TokenType},
     value::Value,
@@ -8,7 +8,7 @@ use super::{
 pub struct Interpreter {}
 
 impl Visitor for Interpreter {
-    fn visit_literal(&self, literal: &Literal) -> Result<Value, RuntimeError> {
+    fn visit_literal(&self, literal: &Literal) -> Result {
         match &literal.value {
             TokenLiteral::Nil => Ok(Value::Nil),
             TokenLiteral::Boolean(b) => Ok(Value::Boolean(*b)),
@@ -18,11 +18,11 @@ impl Visitor for Interpreter {
         }
     }
 
-    fn visit_grouping(&self, grouping: &Grouping) -> Result<Value, RuntimeError> {
+    fn visit_grouping(&self, grouping: &Grouping) -> Result {
         self.evaluate(grouping.expr.as_ref())
     }
 
-    fn visit_unary(&self, unary: &Unary) -> Result<Value, RuntimeError> {
+    fn visit_unary(&self, unary: &Unary) -> Result {
         let right = self.evaluate(unary.right.as_ref())?;
 
         match unary.operator.t {
@@ -35,7 +35,7 @@ impl Visitor for Interpreter {
         }
     }
 
-    fn visit_binary(&self, binary: &Binary) -> Result<Value, RuntimeError> {
+    fn visit_binary(&self, binary: &Binary) -> Result {
         let left = self.evaluate(binary.left.as_ref())?;
         let right = self.evaluate(binary.right.as_ref())?;
 
@@ -97,18 +97,16 @@ impl Interpreter {
         Self {}
     }
 
-    pub fn interpret(&self, expr: &dyn Expression) {
-        let interpreter = Interpreter {};
-        match interpreter.evaluate(expr) {
-            Ok(value) => println!("{}", value),
-            Err(e) => runtime_error(e),
-        }
+    pub fn interpret(&self, expr: &dyn Expression) -> Result {
+        self.evaluate(expr)
     }
 
-    fn evaluate(&self, expr: &dyn Expression) -> Result<Value, RuntimeError> {
+    fn evaluate(&self, expr: &dyn Expression) -> Result {
         expr.accept(self)
     }
 }
+
+type Result = std::result::Result<Value, RuntimeError>;
 
 fn is_truthy(value: &Value) -> bool {
     match value {
@@ -127,7 +125,10 @@ fn is_equal(left: &Value, right: &Value) -> bool {
     }
 }
 
-fn check_number_operand(operand: &Value, operator: &Token) -> Result<(), RuntimeError> {
+fn check_number_operand(
+    operand: &Value,
+    operator: &Token,
+) -> std::result::Result<(), RuntimeError> {
     if operand.is_number() {
         Ok(())
     } else {
@@ -141,7 +142,7 @@ fn check_number_operands(
     left: &Value,
     right: &Value,
     operator: &Token,
-) -> Result<(), RuntimeError> {
+) -> std::result::Result<(), RuntimeError> {
     if left.is_number() && right.is_number() {
         Ok(())
     } else {

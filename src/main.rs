@@ -62,6 +62,9 @@ fn run(source: String) {
     let lox = lox::Lox::new();
     let result = lox.run(source);
     if let Err(e) = result {
-        error::report(e);
+        match e {
+            lox::Error::RuntimeError(e) => error::runtime_error(e),
+            _ => error::report(e),
+        }
     }
 }

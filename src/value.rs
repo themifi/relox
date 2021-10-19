@@ -1,5 +1,6 @@
 use std::fmt;
 
+#[derive(PartialEq, Debug)]
 pub enum Value {
     Nil,
     Boolean(bool),
