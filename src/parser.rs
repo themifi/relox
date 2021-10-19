@@ -113,7 +113,7 @@ fn primary(reader: &mut Reader) -> Result {
         | Some(TokenType::String) => {
             let token = reader.advance().unwrap();
             let expr = Box::new(Literal {
-                value: token.literal,
+                value: token.literal.unwrap(),
             });
             Ok(expr)
         }
@@ -222,24 +222,79 @@ impl Reader {
 
 #[cfg(test)]
 mod tests {
-    use super::{super::token::*, *};
+    use super::{
+        super::token::{Literal as TokenLiteral, *},
+        *,
+    };
 
     #[test]
-    fn test_primary_literals() {
-        let literals = vec!["true", "false", "nil", r#""str""#, "123"];
+    fn test_parse_literals_true() {
+        let tokens = vec![Token {
+            t: TokenType::True,
+            lexeme: "true".to_owned(),
+            literal: Some(TokenLiteral::Boolean(true)),
+            line: 1,
+        }];
 
-        for literal in literals {
-            let tokens = vec![Token {
-                t: TokenType::Nil,
-                lexeme: String::new(),
-                literal: literal.to_owned(),
-                line: 1,
-            }];
+        let tree = parse(tokens).unwrap();
 
-            let tree = parse(tokens).unwrap();
+        assert_eq!("true", format!("{}", tree));
+    }
 
-            assert_eq!(literal, format!("{}", tree));
-        }
+    #[test]
+    fn test_parse_literals_false() {
+        let tokens = vec![Token {
+            t: TokenType::False,
+            lexeme: "false".to_owned(),
+            literal: Some(TokenLiteral::Boolean(false)),
+            line: 1,
+        }];
+
+        let tree = parse(tokens).unwrap();
+
+        assert_eq!("false", format!("{}", tree));
+    }
+
+    #[test]
+    fn test_parse_literals_nil() {
+        let tokens = vec![Token {
+            t: TokenType::Nil,
+            lexeme: "nil".to_owned(),
+            literal: Some(TokenLiteral::Nil),
+            line: 1,
+        }];
+
+        let tree = parse(tokens).unwrap();
+
+        assert_eq!("nil", format!("{}", tree));
+    }
+
+    #[test]
+    fn test_parse_literals_string() {
+        let tokens = vec![Token {
+            t: TokenType::String,
+            lexeme: "foo".to_owned(),
+            literal: Some(TokenLiteral::String("foo".to_owned())),
+            line: 1,
+        }];
+
+        let tree = parse(tokens).unwrap();
+
+        assert_eq!("\"foo\"", format!("{}", tree));
+    }
+
+    #[test]
+    fn test_parse_literals_number() {
+        let tokens = vec![Token {
+            t: TokenType::Number,
+            lexeme: "3.15".to_owned(),
+            literal: Some(TokenLiteral::Number(3.15)),
+            line: 1,
+        }];
+
+        let tree = parse(tokens).unwrap();
+
+        assert_eq!("3.15", format!("{}", tree));
     }
 
     #[test]
@@ -248,19 +303,19 @@ mod tests {
             Token {
                 t: TokenType::LeftParen,
                 lexeme: String::new(),
-                literal: String::new(),
+                literal: None,
                 line: 1,
             },
             Token {
                 t: TokenType::Number,
                 lexeme: String::new(),
-                literal: "2".to_owned(),
+                literal: Some(TokenLiteral::Number(2.0)),
                 line: 1,
             },
             Token {
                 t: TokenType::RightParen,
                 lexeme: String::new(),
-                literal: String::new(),
+                literal: None,
                 line: 1,
             },
         ];
@@ -276,13 +331,13 @@ mod tests {
             Token {
                 t: TokenType::Minus,
                 lexeme: String::new(),
-                literal: String::new(),
+                literal: None,
                 line: 1,
             },
             Token {
                 t: TokenType::Number,
                 lexeme: String::new(),
-                literal: "123".to_owned(),
+                literal: Some(TokenLiteral::Number(123.0)),
                 line: 1,
             },
         ];
@@ -298,13 +353,13 @@ mod tests {
             Token {
                 t: TokenType::Bang,
                 lexeme: String::new(),
-                literal: String::new(),
+                literal: None,
                 line: 1,
             },
             Token {
                 t: TokenType::True,
                 lexeme: String::new(),
-                literal: "true".to_owned(),
+                literal: Some(TokenLiteral::Boolean(true)),
                 line: 1,
             },
         ];
@@ -334,19 +389,19 @@ mod tests {
                 Token {
                     t: TokenType::Number,
                     lexeme: String::new(),
-                    literal: "4".to_owned(),
+                    literal: Some(TokenLiteral::Number(4.0)),
                     line: 1,
                 },
                 Token {
                     t,
                     lexeme: String::new(),
-                    literal: String::new(),
+                    literal: None,
                     line: 1,
                 },
                 Token {
                     t: TokenType::Number,
                     lexeme: String::new(),
-                    literal: "2".to_owned(),
+                    literal: Some(TokenLiteral::Number(2.0)),
                     line: 1,
                 },
             ];
@@ -363,25 +418,25 @@ mod tests {
             Token {
                 t: TokenType::Number,
                 lexeme: String::new(),
-                literal: "4".to_owned(),
+                literal: Some(TokenLiteral::Number(4.0)),
                 line: 1,
             },
             Token {
                 t: TokenType::Star,
                 lexeme: String::new(),
-                literal: String::new(),
+                literal: None,
                 line: 1,
             },
             Token {
                 t: TokenType::Minus,
                 lexeme: String::new(),
-                literal: "2".to_owned(),
+                literal: None,
                 line: 1,
             },
             Token {
                 t: TokenType::Number,
                 lexeme: String::new(),
-                literal: "2".to_owned(),
+                literal: Some(TokenLiteral::Number(2.0)),
                 line: 1,
             },
         ];
@@ -397,31 +452,31 @@ mod tests {
             Token {
                 t: TokenType::Number,
                 lexeme: String::new(),
-                literal: "5".to_owned(),
+                literal: Some(TokenLiteral::Number(5.0)),
                 line: 1,
             },
             Token {
                 t: TokenType::Plus,
                 lexeme: String::new(),
-                literal: String::new(),
+                literal: None,
                 line: 1,
             },
             Token {
                 t: TokenType::Number,
                 lexeme: String::new(),
-                literal: "4".to_owned(),
+                literal: Some(TokenLiteral::Number(4.0)),
                 line: 1,
             },
             Token {
                 t: TokenType::Star,
                 lexeme: String::new(),
-                literal: String::new(),
+                literal: None,
                 line: 1,
             },
             Token {
                 t: TokenType::Number,
                 lexeme: String::new(),
-                literal: "2".to_owned(),
+                literal: Some(TokenLiteral::Number(2.0)),
                 line: 1,
             },
         ];
@@ -437,31 +492,31 @@ mod tests {
             Token {
                 t: TokenType::Number,
                 lexeme: String::new(),
-                literal: "5".to_owned(),
+                literal: Some(TokenLiteral::Number(5.0)),
                 line: 1,
             },
             Token {
                 t: TokenType::Greater,
                 lexeme: String::new(),
-                literal: String::new(),
+                literal: None,
                 line: 1,
             },
             Token {
                 t: TokenType::Number,
                 lexeme: String::new(),
-                literal: "4".to_owned(),
+                literal: Some(TokenLiteral::Number(4.0)),
                 line: 1,
             },
             Token {
                 t: TokenType::Plus,
                 lexeme: String::new(),
-                literal: String::new(),
+                literal: None,
                 line: 1,
             },
             Token {
                 t: TokenType::Number,
                 lexeme: String::new(),
-                literal: "2".to_owned(),
+                literal: Some(TokenLiteral::Number(2.0)),
                 line: 1,
             },
         ];
@@ -477,13 +532,13 @@ mod tests {
             Token {
                 t: TokenType::LeftParen,
                 lexeme: String::new(),
-                literal: String::new(),
+                literal: None,
                 line: 2,
             },
             Token {
                 t: TokenType::Number,
                 lexeme: String::new(),
-                literal: String::new(),
+                literal: Some(TokenLiteral::Number(3.0)),
                 line: 3,
             },
         ];
@@ -498,13 +553,13 @@ mod tests {
             Token {
                 t: TokenType::Number,
                 lexeme: String::new(),
-                literal: String::new(),
+                literal: Some(TokenLiteral::Number(2.0)),
                 line: 2,
             },
             Token {
                 t: TokenType::Plus,
                 lexeme: String::new(),
-                literal: String::new(),
+                literal: None,
                 line: 3,
             },
         ];
@@ -518,7 +573,7 @@ mod tests {
         let tokens = vec![Token {
             t: TokenType::Plus,
             lexeme: "+".to_owned(),
-            literal: String::new(),
+            literal: None,
             line: 3,
         }];
 
@@ -538,31 +593,31 @@ mod tests {
             Token {
                 t: TokenType::Number,
                 lexeme: String::new(),
-                literal: "5".to_owned(),
+                literal: Some(TokenLiteral::Number(5.0)),
                 line: 1,
             },
             Token {
                 t: TokenType::EqualEqual,
                 lexeme: String::new(),
-                literal: String::new(),
+                literal: None,
                 line: 1,
             },
             Token {
                 t: TokenType::Number,
                 lexeme: String::new(),
-                literal: "4".to_owned(),
+                literal: Some(TokenLiteral::Number(4.0)),
                 line: 1,
             },
             Token {
                 t: TokenType::Greater,
                 lexeme: String::new(),
-                literal: String::new(),
+                literal: None,
                 line: 1,
             },
             Token {
                 t: TokenType::Number,
                 lexeme: String::new(),
-                literal: "2".to_owned(),
+                literal: Some(TokenLiteral::Number(2.0)),
                 line: 1,
             },
         ];
@@ -577,19 +632,19 @@ mod tests {
         let first = Token {
             t: TokenType::Number,
             lexeme: String::new(),
-            literal: "5".to_owned(),
+            literal: Some(TokenLiteral::Number(5.0)),
             line: 1,
         };
         let second = Token {
             t: TokenType::EqualEqual,
             lexeme: String::new(),
-            literal: String::new(),
+            literal: None,
             line: 2,
         };
         let third = Token {
             t: TokenType::Nil,
             lexeme: String::new(),
-            literal: String::new(),
+            literal: None,
             line: 3,
         };
         let tokens = vec![first.clone(), second.clone(), third.clone()];
@@ -618,26 +673,26 @@ mod tests {
         let stop_token = Token {
             t: TokenType::Number,
             lexeme: String::new(),
-            literal: String::new(),
+            literal: None,
             line: 3,
         };
         let tokens = vec![
             Token {
                 t: TokenType::Plus,
                 lexeme: "+".to_owned(),
-                literal: String::new(),
+                literal: None,
                 line: 3,
             },
             Token {
                 t: TokenType::Number,
                 lexeme: String::new(),
-                literal: String::new(),
+                literal: None,
                 line: 3,
             },
             Token {
                 t: TokenType::Semicolon,
                 lexeme: String::new(),
-                literal: String::new(),
+                literal: None,
                 line: 3,
             },
             stop_token.clone(),
@@ -646,7 +701,7 @@ mod tests {
 
         let res = parse_with_reader(&mut reader);
 
-        assert_eq!(true, res.is_err());
+        assert!(res.is_err());
         assert_eq!(Some(stop_token), reader.advance());
     }
 
@@ -655,20 +710,20 @@ mod tests {
         let stop_token = Token {
             t: TokenType::Fun,
             lexeme: String::new(),
-            literal: String::new(),
+            literal: None,
             line: 3,
         };
         let tokens = vec![
             Token {
                 t: TokenType::Plus,
                 lexeme: "+".to_owned(),
-                literal: String::new(),
+                literal: None,
                 line: 3,
             },
             Token {
                 t: TokenType::Number,
                 lexeme: String::new(),
-                literal: String::new(),
+                literal: None,
                 line: 3,
             },
             stop_token.clone(),
@@ -677,7 +732,7 @@ mod tests {
 
         let res = parse_with_reader(&mut reader);
 
-        assert_eq!(true, res.is_err());
+        assert!(res.is_err());
         assert_eq!(Some(stop_token), reader.advance());
     }
 

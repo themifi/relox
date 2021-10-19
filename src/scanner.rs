@@ -1,8 +1,8 @@
-use std::{collections::HashMap, fmt};
+use std::{collections::HashMap, fmt, str::FromStr};
 
 use super::{
     error::format_error,
-    token::{Token, TokenType},
+    token::{Literal, Token, TokenType},
 };
 
 pub struct Scanner {
@@ -29,7 +29,7 @@ impl Scanner {
         tokens.push(Token {
             t: TokenType::Eof,
             lexeme: String::new(),
-            literal: String::new(),
+            literal: None,
             line: reader.line(),
         });
 
@@ -106,10 +106,10 @@ impl Scanner {
     }
 
     fn token(t: TokenType, reader: &Reader) -> Token {
-        Self::literal_token(t, String::new(), reader)
+        Self::literal_token(t, None, reader)
     }
 
-    fn literal_token(t: TokenType, literal: String, reader: &Reader) -> Token {
+    fn literal_token(t: TokenType, literal: Option<Literal>, reader: &Reader) -> Token {
         let lexeme = reader.lexeme();
         Token {
             line: reader.line(),
@@ -143,7 +143,11 @@ impl Scanner {
 
         let value = reader.lexeme();
         let s = value[1..value.len() - 1].to_owned();
-        Ok(Self::literal_token(TokenType::String, s, reader))
+        Ok(Self::literal_token(
+            TokenType::String,
+            Some(Literal::String(s)),
+            reader,
+        ))
     }
 
     fn scan_number(reader: &mut Reader) -> Token {
@@ -159,8 +163,8 @@ impl Scanner {
             }
         }
 
-        let literal = reader.lexeme();
-        Self::literal_token(TokenType::Number, literal, reader)
+        let number = f64::from_str(reader.lexeme().as_ref()).unwrap();
+        Self::literal_token(TokenType::Number, Some(Literal::Number(number)), reader)
     }
 
     fn scan_identifier(&self, reader: &mut Reader) -> Token {
@@ -168,12 +172,18 @@ impl Scanner {
             reader.advance();
         }
 
-        let literal = reader.lexeme();
+        let lexeme = reader.lexeme();
         let t = self
             .keywords
-            .get(literal.as_str())
+            .get(lexeme.as_str())
             .unwrap_or(&TokenType::Identifier);
-        Self::token(*t, reader)
+        let literal = match t {
+            TokenType::Nil => Literal::Nil,
+            TokenType::True => Literal::Boolean(true),
+            TokenType::False => Literal::Boolean(false),
+            _ => Literal::Identifier(lexeme),
+        };
+        Self::literal_token(*t, Some(literal), reader)
     }
 }
 
@@ -303,7 +313,7 @@ mod tests {
                 t: TokenType::Eof,
                 line: 1,
                 lexeme: String::new(),
-                literal: String::new(),
+                literal: None,
             }]),
             scanner.scan_tokens(source)
         );
@@ -318,19 +328,19 @@ mod tests {
                     t: TokenType::LeftParen,
                     line: 1,
                     lexeme: "(".to_owned(),
-                    literal: String::new(),
+                    literal: None,
                 },
                 Token {
                     t: TokenType::RightParen,
                     line: 1,
                     lexeme: ")".to_owned(),
-                    literal: String::new(),
+                    literal: None,
                 },
                 Token {
                     t: TokenType::Eof,
                     line: 1,
                     lexeme: String::new(),
-                    literal: String::new(),
+                    literal: None,
                 }
             ]),
             scanner.scan_tokens("()".to_owned())
@@ -347,19 +357,19 @@ mod tests {
                     t: TokenType::LeftBrace,
                     line: 1,
                     lexeme: "{".to_owned(),
-                    literal: String::new(),
+                    literal: None,
                 },
                 Token {
                     t: TokenType::RightBrace,
                     line: 1,
                     lexeme: "}".to_owned(),
-                    literal: String::new(),
+                    literal: None,
                 },
                 Token {
                     t: TokenType::Eof,
                     line: 1,
                     lexeme: String::new(),
-                    literal: String::new(),
+                    literal: None,
                 }
             ]),
             scanner.scan_tokens(source)
@@ -376,31 +386,31 @@ mod tests {
                     t: TokenType::Plus,
                     line: 1,
                     lexeme: "+".to_owned(),
-                    literal: String::new(),
+                    literal: None,
                 },
                 Token {
                     t: TokenType::Minus,
                     line: 1,
                     lexeme: "-".to_owned(),
-                    literal: String::new(),
+                    literal: None,
                 },
                 Token {
                     t: TokenType::Star,
                     line: 1,
                     lexeme: "*".to_owned(),
-                    literal: String::new(),
+                    literal: None,
                 },
                 Token {
                     t: TokenType::Slash,
                     line: 1,
                     lexeme: "/".to_owned(),
-                    literal: String::new(),
+                    literal: None,
                 },
                 Token {
                     t: TokenType::Eof,
                     line: 1,
                     lexeme: String::new(),
-                    literal: String::new(),
+                    literal: None,
                 }
             ]),
             scanner.scan_tokens(source)
@@ -417,55 +427,55 @@ mod tests {
                     t: TokenType::Less,
                     line: 1,
                     lexeme: "<".to_owned(),
-                    literal: String::new(),
+                    literal: None,
                 },
                 Token {
                     t: TokenType::LessEqual,
                     line: 1,
                     lexeme: "<=".to_owned(),
-                    literal: String::new(),
+                    literal: None,
                 },
                 Token {
                     t: TokenType::Greater,
                     line: 1,
                     lexeme: ">".to_owned(),
-                    literal: String::new(),
+                    literal: None,
                 },
                 Token {
                     t: TokenType::GreaterEqual,
                     line: 1,
                     lexeme: ">=".to_owned(),
-                    literal: String::new(),
+                    literal: None,
                 },
                 Token {
                     t: TokenType::Bang,
                     line: 1,
                     lexeme: "!".to_owned(),
-                    literal: String::new(),
+                    literal: None,
                 },
                 Token {
                     t: TokenType::BangEqual,
                     line: 1,
                     lexeme: "!=".to_owned(),
-                    literal: String::new(),
+                    literal: None,
                 },
                 Token {
                     t: TokenType::Equal,
                     line: 1,
                     lexeme: "=".to_owned(),
-                    literal: String::new(),
+                    literal: None,
                 },
                 Token {
                     t: TokenType::EqualEqual,
                     line: 1,
                     lexeme: "==".to_owned(),
-                    literal: String::new(),
+                    literal: None,
                 },
                 Token {
                     t: TokenType::Eof,
                     line: 1,
                     lexeme: String::new(),
-                    literal: String::new(),
+                    literal: None,
                 }
             ]),
             scanner.scan_tokens(source)
@@ -482,25 +492,25 @@ mod tests {
                     t: TokenType::Dot,
                     line: 1,
                     lexeme: ".".to_owned(),
-                    literal: String::new(),
+                    literal: None,
                 },
                 Token {
                     t: TokenType::Comma,
                     line: 1,
                     lexeme: ",".to_owned(),
-                    literal: String::new(),
+                    literal: None,
                 },
                 Token {
                     t: TokenType::Semicolon,
                     line: 1,
                     lexeme: ";".to_owned(),
-                    literal: String::new(),
+                    literal: None,
                 },
                 Token {
                     t: TokenType::Eof,
                     line: 1,
                     lexeme: String::new(),
-                    literal: String::new(),
+                    literal: None,
                 }
             ]),
             scanner.scan_tokens(source)
@@ -517,13 +527,13 @@ mod tests {
                     t: TokenType::String,
                     line: 1,
                     lexeme: "\"foo\"".to_owned(),
-                    literal: "foo".to_owned(),
+                    literal: Some(Literal::String("foo".to_owned())),
                 },
                 Token {
                     t: TokenType::Eof,
                     line: 1,
                     lexeme: String::new(),
-                    literal: String::new(),
+                    literal: None,
                 }
             ]),
             scanner.scan_tokens(source)
@@ -540,13 +550,13 @@ mod tests {
                     t: TokenType::Number,
                     line: 1,
                     lexeme: "123".to_owned(),
-                    literal: "123".to_owned(),
+                    literal: Some(Literal::Number(123.0)),
                 },
                 Token {
                     t: TokenType::Eof,
                     line: 1,
                     lexeme: String::new(),
-                    literal: String::new(),
+                    literal: None,
                 }
             ]),
             scanner.scan_tokens(source)
@@ -556,20 +566,20 @@ mod tests {
     #[test]
     fn test_real_number() {
         let scanner = Scanner::new();
-        let source = "3.14".to_owned();
+        let source = "3.15".to_owned();
         assert_eq!(
             Ok(vec![
                 Token {
                     t: TokenType::Number,
                     line: 1,
-                    lexeme: "3.14".to_owned(),
-                    literal: "3.14".to_owned(),
+                    lexeme: "3.15".to_owned(),
+                    literal: Some(Literal::Number(3.15)),
                 },
                 Token {
                     t: TokenType::Eof,
                     line: 1,
                     lexeme: String::new(),
-                    literal: String::new(),
+                    literal: None,
                 }
             ]),
             scanner.scan_tokens(source)
@@ -586,19 +596,19 @@ mod tests {
                     t: TokenType::Identifier,
                     line: 1,
                     lexeme: "foo".to_owned(),
-                    literal: String::new(),
+                    literal: Some(Literal::Identifier("foo".to_owned())),
                 },
                 Token {
                     t: TokenType::Identifier,
                     line: 1,
                     lexeme: "bar".to_owned(),
-                    literal: String::new(),
+                    literal: Some(Literal::Identifier("bar".to_owned())),
                 },
                 Token {
                     t: TokenType::Eof,
                     line: 1,
                     lexeme: String::new(),
-                    literal: String::new(),
+                    literal: None,
                 }
             ]),
             scanner.scan_tokens(source)
@@ -610,17 +620,14 @@ mod tests {
         let source = "and
         class
         else
-        false
         for
         fun
         if
-        nil
         or
         print
         return
         super
         this
-        true
         var
         while"
             .to_owned();
@@ -632,103 +639,124 @@ mod tests {
                     t: TokenType::And,
                     line: 1,
                     lexeme: "and".to_owned(),
-                    literal: String::new(),
+                    literal: Some(Literal::Identifier("and".to_owned())),
                 },
                 Token {
                     t: TokenType::Class,
                     line: 2,
                     lexeme: "class".to_owned(),
-                    literal: String::new(),
+                    literal: Some(Literal::Identifier("class".to_owned())),
                 },
                 Token {
                     t: TokenType::Else,
                     line: 3,
                     lexeme: "else".to_owned(),
-                    literal: String::new(),
-                },
-                Token {
-                    t: TokenType::False,
-                    line: 4,
-                    lexeme: "false".to_owned(),
-                    literal: String::new(),
+                    literal: Some(Literal::Identifier("else".to_owned())),
                 },
                 Token {
                     t: TokenType::For,
-                    line: 5,
+                    line: 4,
                     lexeme: "for".to_owned(),
-                    literal: String::new(),
+                    literal: Some(Literal::Identifier("for".to_owned())),
                 },
                 Token {
                     t: TokenType::Fun,
-                    line: 6,
+                    line: 5,
                     lexeme: "fun".to_owned(),
-                    literal: String::new(),
+                    literal: Some(Literal::Identifier("fun".to_owned())),
                 },
                 Token {
                     t: TokenType::If,
-                    line: 7,
+                    line: 6,
                     lexeme: "if".to_owned(),
-                    literal: String::new(),
-                },
-                Token {
-                    t: TokenType::Nil,
-                    line: 8,
-                    lexeme: "nil".to_owned(),
-                    literal: String::new(),
+                    literal: Some(Literal::Identifier("if".to_owned())),
                 },
                 Token {
                     t: TokenType::Or,
-                    line: 9,
+                    line: 7,
                     lexeme: "or".to_owned(),
-                    literal: String::new(),
+                    literal: Some(Literal::Identifier("or".to_owned())),
                 },
                 Token {
                     t: TokenType::Print,
-                    line: 10,
+                    line: 8,
                     lexeme: "print".to_owned(),
-                    literal: String::new(),
+                    literal: Some(Literal::Identifier("print".to_owned())),
                 },
                 Token {
                     t: TokenType::Return,
-                    line: 11,
+                    line: 9,
                     lexeme: "return".to_owned(),
-                    literal: String::new(),
+                    literal: Some(Literal::Identifier("return".to_owned())),
                 },
                 Token {
                     t: TokenType::Super,
-                    line: 12,
+                    line: 10,
                     lexeme: "super".to_owned(),
-                    literal: String::new(),
+                    literal: Some(Literal::Identifier("super".to_owned())),
                 },
                 Token {
                     t: TokenType::This,
-                    line: 13,
+                    line: 11,
                     lexeme: "this".to_owned(),
-                    literal: String::new(),
-                },
-                Token {
-                    t: TokenType::True,
-                    line: 14,
-                    lexeme: "true".to_owned(),
-                    literal: String::new(),
+                    literal: Some(Literal::Identifier("this".to_owned())),
                 },
                 Token {
                     t: TokenType::Var,
-                    line: 15,
+                    line: 12,
                     lexeme: "var".to_owned(),
-                    literal: String::new(),
+                    literal: Some(Literal::Identifier("var".to_owned())),
                 },
                 Token {
                     t: TokenType::While,
-                    line: 16,
+                    line: 13,
                     lexeme: "while".to_owned(),
-                    literal: String::new(),
+                    literal: Some(Literal::Identifier("while".to_owned())),
                 },
                 Token {
                     t: TokenType::Eof,
-                    line: 16,
+                    line: 13,
                     lexeme: String::new(),
-                    literal: String::new(),
+                    literal: None,
+                },
+            ]),
+            scanner.scan_tokens(source)
+        );
+    }
+
+    #[test]
+    fn test_keyword_literals() {
+        let source = "nil
+        true
+        false"
+            .to_owned();
+
+        let scanner = Scanner::new();
+        assert_eq!(
+            Ok(vec![
+                Token {
+                    t: TokenType::Nil,
+                    line: 1,
+                    lexeme: "nil".to_owned(),
+                    literal: Some(Literal::Nil),
+                },
+                Token {
+                    t: TokenType::True,
+                    line: 2,
+                    lexeme: "true".to_owned(),
+                    literal: Some(Literal::Boolean(true)),
+                },
+                Token {
+                    t: TokenType::False,
+                    line: 3,
+                    lexeme: "false".to_owned(),
+                    literal: Some(Literal::Boolean(false)),
+                },
+                Token {
+                    t: TokenType::Eof,
+                    line: 3,
+                    lexeme: String::new(),
+                    literal: None,
                 },
             ]),
             scanner.scan_tokens(source)

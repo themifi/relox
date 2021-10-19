@@ -18,10 +18,10 @@ More description [in the book](https://www.craftinginterpreters.com/the-lox-lang
 
 ## Components
 
-- [ ] Tree-walk interpreter
+- [x] Tree-walk interpreter
   - [x] Scanning
   - [x] Parsing
-  - [ ] Evaluating
+  - [x] Evaluating
 - [ ] Intermediate representation
 - [ ] Optimization
 - [ ] Code generation

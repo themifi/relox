@@ -6,9 +6,12 @@ use std::{
 
 mod error;
 mod expression;
+mod interpreter;
+mod lox;
 mod parser;
 mod scanner;
 mod token;
+mod value;
 
 fn main() {
     let mut args = env::args();
@@ -28,6 +31,8 @@ fn run_file(file: String) {
     unsafe {
         if error::HAD_ERROR {
             process::exit(65);
+        } else if error::HAD_RUNTIME_ERROR {
+            process::exit(70);
         }
     }
 }
@@ -54,16 +59,12 @@ fn run_prompt() {
 }
 
 fn run(source: String) {
-    let scanner = scanner::Scanner::new();
-    let result = scanner.scan_tokens(source);
+    let lox = lox::Lox::new();
+    let result = lox.run(source);
     if let Err(e) = result {
-        error::report(e);
-        return;
+        match e {
+            lox::Error::Runtime(e) => error::runtime_error(e),
+            _ => error::report(e),
+        }
     }
-    let tokens = result.unwrap();
-
-    match parser::parse(tokens) {
-        Ok(expression) => println!("{}", expression),
-        Err(err) => error::report(err),
-    };
 }
