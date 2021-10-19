@@ -287,14 +287,14 @@ mod tests {
     fn test_parse_literals_number() {
         let tokens = vec![Token {
             t: TokenType::Number,
-            lexeme: "3.14".to_owned(),
-            literal: Some(TokenLiteral::Number(3.14)),
+            lexeme: "3.15".to_owned(),
+            literal: Some(TokenLiteral::Number(3.15)),
             line: 1,
         }];
 
         let tree = parse(tokens).unwrap();
 
-        assert_eq!("3.14", format!("{}", tree));
+        assert_eq!("3.15", format!("{}", tree));
     }
 
     #[test]
@@ -701,7 +701,7 @@ mod tests {
 
         let res = parse_with_reader(&mut reader);
 
-        assert_eq!(true, res.is_err());
+        assert!(res.is_err());
         assert_eq!(Some(stop_token), reader.advance());
     }
 
@@ -732,7 +732,7 @@ mod tests {
 
         let res = parse_with_reader(&mut reader);
 
-        assert_eq!(true, res.is_err());
+        assert!(res.is_err());
         assert_eq!(Some(stop_token), reader.advance());
     }
 

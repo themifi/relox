@@ -116,6 +116,7 @@ fn is_truthy(value: &Value) -> bool {
     }
 }
 
+#[allow(clippy::float_cmp)]
 fn is_equal(left: &Value, right: &Value) -> bool {
     match left {
         Value::Nil => right.is_nil(),

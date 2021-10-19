@@ -26,35 +26,35 @@ impl Lox {
 }
 
 pub enum Error {
-    ScanError(scanner::Error),
-    ParseError(parser::Error),
-    RuntimeError(error::RuntimeError),
+    Scan(scanner::Error),
+    Parse(parser::Error),
+    Runtime(error::RuntimeError),
 }
 
 impl From<scanner::Error> for Error {
     fn from(error: scanner::Error) -> Self {
-        Error::ScanError(error)
+        Error::Scan(error)
     }
 }
 
 impl From<parser::Error> for Error {
     fn from(error: parser::Error) -> Self {
-        Error::ParseError(error)
+        Error::Parse(error)
     }
 }
 
 impl From<error::RuntimeError> for Error {
     fn from(error: error::RuntimeError) -> Self {
-        Error::RuntimeError(error)
+        Error::Runtime(error)
     }
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Self::ScanError(e) => write!(f, "{}", e),
-            Self::ParseError(e) => write!(f, "{}", e),
-            Self::RuntimeError(e) => write!(f, "{}", e),
+            Self::Scan(e) => write!(f, "{}", e),
+            Self::Parse(e) => write!(f, "{}", e),
+            Self::Runtime(e) => write!(f, "{}", e),
         }
     }
 }

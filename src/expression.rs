@@ -39,25 +39,25 @@ pub trait Visitor {
 
 impl Expression for Binary {
     fn accept(&self, visitor: &dyn Visitor) -> Result<Value, RuntimeError> {
-        visitor.visit_binary(&self)
+        visitor.visit_binary(self)
     }
 }
 
 impl Expression for Grouping {
     fn accept(&self, visitor: &dyn Visitor) -> Result<Value, RuntimeError> {
-        visitor.visit_grouping(&self)
+        visitor.visit_grouping(self)
     }
 }
 
 impl Expression for Literal {
     fn accept(&self, visitor: &dyn Visitor) -> Result<Value, RuntimeError> {
-        visitor.visit_literal(&self)
+        visitor.visit_literal(self)
     }
 }
 
 impl Expression for Unary {
     fn accept(&self, visitor: &dyn Visitor) -> Result<Value, RuntimeError> {
-        visitor.visit_unary(&self)
+        visitor.visit_unary(self)
     }
 }
 

@@ -176,15 +176,14 @@ impl Scanner {
         let t = self
             .keywords
             .get(lexeme.as_str())
-            .unwrap_or(&TokenType::Identifier)
-            .clone();
+            .unwrap_or(&TokenType::Identifier);
         let literal = match t {
             TokenType::Nil => Literal::Nil,
             TokenType::True => Literal::Boolean(true),
             TokenType::False => Literal::Boolean(false),
             _ => Literal::Identifier(lexeme),
         };
-        Self::literal_token(t, Some(literal), reader)
+        Self::literal_token(*t, Some(literal), reader)
     }
 }
 
@@ -567,14 +566,14 @@ mod tests {
     #[test]
     fn test_real_number() {
         let scanner = Scanner::new();
-        let source = "3.14".to_owned();
+        let source = "3.15".to_owned();
         assert_eq!(
             Ok(vec![
                 Token {
                     t: TokenType::Number,
                     line: 1,
-                    lexeme: "3.14".to_owned(),
-                    literal: Some(Literal::Number(3.14)),
+                    lexeme: "3.15".to_owned(),
+                    literal: Some(Literal::Number(3.15)),
                 },
                 Token {
                     t: TokenType::Eof,
