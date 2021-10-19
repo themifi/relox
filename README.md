@@ -5,7 +5,7 @@
 
 **Re**implementation of the **Lox** programming language.
 
-[Crafting interpreters book](https://www.craftinginterpreters.com/) explains how to implement the Lox programming language and all its parts from scratch. I'll write my own implementation here in [the Rust programming lanugage](https://www.rust-lang.org/).
+[Crafting interpreters book](https://www.craftinginterpreters.com/) by Robert Nystrom explains how to implement the Lox programming language from scratch. This is my own implementation here written in [the Rust programming lanugage](https://www.rust-lang.org/).
 
 The Lox programming language:
 
