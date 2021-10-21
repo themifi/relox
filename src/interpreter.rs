@@ -1,14 +1,17 @@
+use crate::statement::Statement;
+
 use super::{
     error::RuntimeError,
-    expression::{Binary, Expression, Grouping, Literal, Unary, Visitor},
+    expression::{Binary, Expression, Grouping, Literal, Unary, Visitor as ExpressionVisitor},
+    statement::{ExpressionStatement, Print, Visitor as StatementVisitor},
     token::{Literal as TokenLiteral, Token, TokenType},
     value::Value,
 };
 
 pub struct Interpreter {}
 
-impl Visitor for Interpreter {
-    fn visit_literal(&self, literal: &Literal) -> Result {
+impl ExpressionVisitor for Interpreter {
+    fn visit_literal(&self, literal: &Literal) -> ValueResult {
         match &literal.value {
             TokenLiteral::Nil => Ok(Value::Nil),
             TokenLiteral::Boolean(b) => Ok(Value::Boolean(*b)),
@@ -18,11 +21,11 @@ impl Visitor for Interpreter {
         }
     }
 
-    fn visit_grouping(&self, grouping: &Grouping) -> Result {
+    fn visit_grouping(&self, grouping: &Grouping) -> ValueResult {
         self.evaluate(grouping.expr.as_ref())
     }
 
-    fn visit_unary(&self, unary: &Unary) -> Result {
+    fn visit_unary(&self, unary: &Unary) -> ValueResult {
         let right = self.evaluate(unary.right.as_ref())?;
 
         match unary.operator.t {
@@ -35,7 +38,7 @@ impl Visitor for Interpreter {
         }
     }
 
-    fn visit_binary(&self, binary: &Binary) -> Result {
+    fn visit_binary(&self, binary: &Binary) -> ValueResult {
         let left = self.evaluate(binary.left.as_ref())?;
         let right = self.evaluate(binary.right.as_ref())?;
 
@@ -92,21 +95,42 @@ impl Visitor for Interpreter {
     }
 }
 
+impl StatementVisitor for Interpreter {
+    fn visit_expression_statement(&self, expr: &ExpressionStatement) -> Result {
+        self.evaluate(expr.expr.as_ref())?;
+        Ok(())
+    }
+
+    fn visit_print(&self, print: &Print) -> Result {
+        let value = self.evaluate(print.expr.as_ref())?;
+        println!("{}", value);
+        Ok(())
+    }
+}
+
+type ValueResult = std::result::Result<Value, RuntimeError>;
+type Result = std::result::Result<(), RuntimeError>;
+
 impl Interpreter {
     pub fn new() -> Self {
         Self {}
     }
 
-    pub fn interpret(&self, expr: &dyn Expression) -> Result {
-        self.evaluate(expr)
+    pub fn interpret(&self, statements: Vec<Box<dyn Statement>>) -> Result {
+        for statement in statements {
+            self.execute(statement.as_ref())?;
+        }
+        Ok(())
     }
 
-    fn evaluate(&self, expr: &dyn Expression) -> Result {
+    fn execute(&self, expr: &dyn Statement) -> Result {
+        expr.accept(self)
+    }
+
+    fn evaluate(&self, expr: &dyn Expression) -> ValueResult {
         expr.accept(self)
     }
 }
-
-type Result = std::result::Result<Value, RuntimeError>;
 
 fn is_truthy(value: &Value) -> bool {
     match value {
@@ -157,9 +181,9 @@ fn check_number_operands(
 mod tests {
     use super::*;
 
-    fn interpret(expr: &dyn Expression) -> Result {
+    fn eval(expr: &dyn Expression) -> ValueResult {
         let interpreter = Interpreter::new();
-        interpreter.interpret(expr)
+        interpreter.evaluate(expr)
     }
 
     #[test]
@@ -176,7 +200,7 @@ mod tests {
 
         for (literal, value) in literals {
             let expr = Literal { value: literal };
-            assert_eq!(Ok(value), interpret(&expr));
+            assert_eq!(Ok(value), eval(&expr));
         }
     }
 
@@ -193,7 +217,7 @@ mod tests {
                 value: TokenLiteral::Number(2.0),
             }),
         };
-        assert_eq!(Ok(Value::Number(-2.0)), interpret(&expr));
+        assert_eq!(Ok(Value::Number(-2.0)), eval(&expr));
     }
 
     #[test]
@@ -209,7 +233,7 @@ mod tests {
                 value: TokenLiteral::Boolean(true),
             }),
         };
-        assert_eq!(Ok(Value::Boolean(false)), interpret(&expr));
+        assert_eq!(Ok(Value::Boolean(false)), eval(&expr));
     }
 
     #[test]
@@ -233,7 +257,7 @@ mod tests {
                 Err(RuntimeError::OperandMustBeANumber {
                     token: expr.operator.clone(),
                 }),
-                interpret(&expr)
+                eval(&expr)
             );
         }
     }
@@ -257,7 +281,7 @@ mod tests {
                 },
                 right: Box::new(Literal { value: literal }),
             };
-            assert_eq!(Ok(Value::Boolean(result)), interpret(&expr));
+            assert_eq!(Ok(Value::Boolean(result)), eval(&expr));
         }
     }
 
@@ -276,7 +300,7 @@ mod tests {
                 }),
             }),
         };
-        assert_eq!(Ok(Value::Boolean(false)), interpret(&expr));
+        assert_eq!(Ok(Value::Boolean(false)), eval(&expr));
     }
 
     #[test]
@@ -303,7 +327,7 @@ mod tests {
                     value: TokenLiteral::Number(5.0),
                 }),
             };
-            assert_eq!(Ok(Value::Number(result)), interpret(&expr));
+            assert_eq!(Ok(Value::Number(result)), eval(&expr));
         }
     }
 
@@ -344,7 +368,7 @@ mod tests {
                     Err(RuntimeError::OperandsMustBeNumbers {
                         token: expr.operator.clone()
                     }),
-                    interpret(&expr)
+                    eval(&expr)
                 );
             }
         }
@@ -387,7 +411,7 @@ mod tests {
                 Err(RuntimeError::OperandsMustBeTwoNumbersOrTwoStrings {
                     token: expr.operator.clone()
                 }),
-                interpret(&expr)
+                eval(&expr)
             );
         }
     }
@@ -430,7 +454,7 @@ mod tests {
                     value: TokenLiteral::Number(right),
                 }),
             };
-            assert_eq!(Ok(Value::Boolean(result)), interpret(&expr));
+            assert_eq!(Ok(Value::Boolean(result)), eval(&expr));
         }
     }
 
@@ -450,7 +474,7 @@ mod tests {
                 value: TokenLiteral::String("bar".to_owned()),
             }),
         };
-        assert_eq!(Ok(Value::String("foobar".to_owned())), interpret(&expr));
+        assert_eq!(Ok(Value::String("foobar".to_owned())), eval(&expr));
     }
 
     #[test]
@@ -550,10 +574,10 @@ mod tests {
                 },
                 right: Box::new(Literal { value: right }),
             };
-            assert_eq!(Ok(Value::Boolean(true_result)), interpret(&expr));
+            assert_eq!(Ok(Value::Boolean(true_result)), eval(&expr));
 
             expr.operator.t = TokenType::BangEqual;
-            assert_eq!(Ok(Value::Boolean(!true_result)), interpret(&expr));
+            assert_eq!(Ok(Value::Boolean(!true_result)), eval(&expr));
         }
     }
 }

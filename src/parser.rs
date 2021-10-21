@@ -1,30 +1,69 @@
 use super::{
     error::format_error,
     expression::{Binary, Expression, Grouping, Literal, Unary},
+    statement::{ExpressionStatement, Print, Statement},
     token::{Token, TokenType},
 };
 use std::fmt;
 
-pub fn parse(tokens: Vec<Token>) -> Result {
+pub fn parse(tokens: Vec<Token>) -> StatementsResult {
     let mut reader = Reader::new(tokens);
-    parse_with_reader(&mut reader)
+
+    let mut statements = Vec::new();
+    while !reader.is_at_end() {
+        statements.push(parse_with_reader(&mut reader)?);
+    }
+    Ok(statements)
 }
 
-fn parse_with_reader(reader: &mut Reader) -> Result {
-    let result = expression(reader);
+type StatementsResult = std::result::Result<Vec<Box<dyn Statement>>, Error>;
+type StatementResult = std::result::Result<Box<dyn Statement>, Error>;
+type ExpressionResult = std::result::Result<Box<dyn Expression>, Error>;
+
+fn parse_with_reader(reader: &mut Reader) -> StatementResult {
+    let result = statement(reader);
     if result.is_err() {
         syncronize(reader);
     }
     result
 }
 
-type Result = std::result::Result<Box<dyn Expression>, Error>;
+fn statement(reader: &mut Reader) -> StatementResult {
+    if let Some(TokenType::Print) = reader.peek_type() {
+        reader.advance();
+        print_statement(reader)
+    } else {
+        expression_statement(reader)
+    }
+}
 
-fn expression(reader: &mut Reader) -> Result {
+fn print_statement(reader: &mut Reader) -> StatementResult {
+    let expr = expression(reader)?;
+    let token_type = reader.advance().map(|x| x.t);
+    if token_type != Some(TokenType::Semicolon) {
+        return Err(Error::ExpectSemicolonAfterValue {
+            line: reader.line(),
+        });
+    }
+    Ok(Box::new(Print { expr }))
+}
+
+fn expression_statement(reader: &mut Reader) -> StatementResult {
+    let expr = expression(reader)?;
+    let token_type = reader.advance().map(|x| x.t);
+    if token_type != Some(TokenType::Semicolon) {
+        return Err(Error::ExpectSemicolonAfterExpression {
+            line: reader.line(),
+        });
+    }
+    Ok(Box::new(ExpressionStatement { expr }))
+}
+
+fn expression(reader: &mut Reader) -> ExpressionResult {
     equality(reader)
 }
 
-fn equality(reader: &mut Reader) -> Result {
+fn equality(reader: &mut Reader) -> ExpressionResult {
     let mut expr = comparsion(reader)?;
 
     while let Some(TokenType::BangEqual) | Some(TokenType::EqualEqual) = reader.peek_type() {
@@ -40,7 +79,7 @@ fn equality(reader: &mut Reader) -> Result {
     Ok(expr)
 }
 
-fn comparsion(reader: &mut Reader) -> Result {
+fn comparsion(reader: &mut Reader) -> ExpressionResult {
     let mut expr = term(reader)?;
 
     while let Some(TokenType::Greater)
@@ -60,7 +99,7 @@ fn comparsion(reader: &mut Reader) -> Result {
     Ok(expr)
 }
 
-fn term(reader: &mut Reader) -> Result {
+fn term(reader: &mut Reader) -> ExpressionResult {
     let mut expr = factor(reader)?;
 
     while let Some(TokenType::Minus) | Some(TokenType::Plus) = reader.peek_type() {
@@ -76,7 +115,7 @@ fn term(reader: &mut Reader) -> Result {
     Ok(expr)
 }
 
-fn factor(reader: &mut Reader) -> Result {
+fn factor(reader: &mut Reader) -> ExpressionResult {
     let mut expr = unary(reader)?;
 
     while let Some(TokenType::Slash) | Some(TokenType::Star) = reader.peek_type() {
@@ -92,7 +131,7 @@ fn factor(reader: &mut Reader) -> Result {
     Ok(expr)
 }
 
-fn unary(reader: &mut Reader) -> Result {
+fn unary(reader: &mut Reader) -> ExpressionResult {
     match reader.peek_type() {
         Some(TokenType::Bang) | Some(TokenType::Minus) => {
             let operator = reader.advance().unwrap();
@@ -104,7 +143,7 @@ fn unary(reader: &mut Reader) -> Result {
     }
 }
 
-fn primary(reader: &mut Reader) -> Result {
+fn primary(reader: &mut Reader) -> ExpressionResult {
     match reader.peek_type() {
         Some(TokenType::True)
         | Some(TokenType::False)
@@ -167,6 +206,8 @@ pub enum Error {
     RightParenExpected { line: usize },
     UnexpectedToken { line: usize, lexeme: String },
     ExpressionExpected { line: usize },
+    ExpectSemicolonAfterValue { line: usize },
+    ExpectSemicolonAfterExpression { line: usize },
 }
 
 impl fmt::Display for Error {
@@ -177,6 +218,12 @@ impl fmt::Display for Error {
                 format_error(line, format!("unexpected token: {:?}", lexeme))
             }
             Self::ExpressionExpected { line } => format_error(line, "expression expected"),
+            Self::ExpectSemicolonAfterValue { line } => {
+                format_error(line, "expect ';' after value")
+            }
+            Self::ExpectSemicolonAfterExpression { line } => {
+                format_error(line, "expect ';' after expression")
+            }
         };
         write!(f, "{}", msg)
     }
@@ -200,7 +247,7 @@ impl Reader {
         }
     }
 
-    fn peek_type(&mut self) -> Option<TokenType> {
+    fn peek_type(&self) -> Option<TokenType> {
         self.current.as_ref().map(|x| x.t)
     }
 
@@ -218,6 +265,10 @@ impl Reader {
     fn line(&self) -> usize {
         self.last_line
     }
+
+    fn is_at_end(&self) -> bool {
+        self.peek_type() == Some(TokenType::Eof)
+    }
 }
 
 #[cfg(test)]
@@ -226,6 +277,11 @@ mod tests {
         super::token::{Literal as TokenLiteral, *},
         *,
     };
+
+    fn parse_expression(tokens: Vec<Token>) -> ExpressionResult {
+        let mut reader = Reader::new(tokens);
+        expression(&mut reader)
+    }
 
     #[test]
     fn test_parse_literals_true() {
@@ -236,7 +292,7 @@ mod tests {
             line: 1,
         }];
 
-        let tree = parse(tokens).unwrap();
+        let tree = parse_expression(tokens).unwrap();
 
         assert_eq!("true", format!("{}", tree));
     }
@@ -250,7 +306,7 @@ mod tests {
             line: 1,
         }];
 
-        let tree = parse(tokens).unwrap();
+        let tree = parse_expression(tokens).unwrap();
 
         assert_eq!("false", format!("{}", tree));
     }
@@ -264,7 +320,7 @@ mod tests {
             line: 1,
         }];
 
-        let tree = parse(tokens).unwrap();
+        let tree = parse_expression(tokens).unwrap();
 
         assert_eq!("nil", format!("{}", tree));
     }
@@ -278,7 +334,7 @@ mod tests {
             line: 1,
         }];
 
-        let tree = parse(tokens).unwrap();
+        let tree = parse_expression(tokens).unwrap();
 
         assert_eq!("\"foo\"", format!("{}", tree));
     }
@@ -292,7 +348,7 @@ mod tests {
             line: 1,
         }];
 
-        let tree = parse(tokens).unwrap();
+        let tree = parse_expression(tokens).unwrap();
 
         assert_eq!("3.15", format!("{}", tree));
     }
@@ -320,7 +376,7 @@ mod tests {
             },
         ];
 
-        let tree = parse(tokens).unwrap();
+        let tree = parse_expression(tokens).unwrap();
 
         assert_eq!("(group 2)", format!("{}", tree));
     }
@@ -342,7 +398,7 @@ mod tests {
             },
         ];
 
-        let tree = parse(tokens).unwrap();
+        let tree = parse_expression(tokens).unwrap();
 
         assert_eq!("(- 123)", format!("{}", tree));
     }
@@ -364,7 +420,7 @@ mod tests {
             },
         ];
 
-        let tree = parse(tokens).unwrap();
+        let tree = parse_expression(tokens).unwrap();
 
         assert_eq!("(! true)", format!("{}", tree));
     }
@@ -406,7 +462,7 @@ mod tests {
                 },
             ];
 
-            let tree = parse(tokens).unwrap();
+            let tree = parse_expression(tokens).unwrap();
 
             assert_eq!(format!("({} 4 2)", t), format!("{}", tree));
         }
@@ -441,7 +497,7 @@ mod tests {
             },
         ];
 
-        let tree = parse(tokens).unwrap();
+        let tree = parse_expression(tokens).unwrap();
 
         assert_eq!("(* 4 (- 2))", format!("{}", tree));
     }
@@ -481,7 +537,7 @@ mod tests {
             },
         ];
 
-        let tree = parse(tokens).unwrap();
+        let tree = parse_expression(tokens).unwrap();
 
         assert_eq!("(+ 5 (* 4 2))", format!("{}", tree));
     }
@@ -521,7 +577,7 @@ mod tests {
             },
         ];
 
-        let tree = parse(tokens).unwrap();
+        let tree = parse_expression(tokens).unwrap();
 
         assert_eq!("(> 5 (+ 4 2))", format!("{}", tree));
     }
@@ -622,7 +678,7 @@ mod tests {
             },
         ];
 
-        let tree = parse(tokens).unwrap();
+        let tree = parse_expression(tokens).unwrap();
 
         assert_eq!("(== 5 (> 4 2))", format!("{}", tree));
     }

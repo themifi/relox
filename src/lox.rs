@@ -1,4 +1,4 @@
-use super::{error, interpreter, parser, scanner, value::Value};
+use super::{error, interpreter, parser, scanner};
 use std::fmt;
 
 pub struct Lox {
@@ -16,12 +16,25 @@ impl Lox {
         }
     }
 
-    pub fn run(&self, source: String) -> Result<Value, Error> {
-        let tokens = self.scanner.scan_tokens(source)?;
-        let expression = parser::parse(tokens)?;
-        self.interpreter
-            .interpret(expression.as_ref())
-            .map_err(|e| e.into())
+    pub fn run(&self, source: String) {
+        let result = self.scanner.scan_tokens(source);
+        if let Err(e) = result {
+            error::report(e);
+            return;
+        }
+        let tokens = result.unwrap();
+
+        let result = parser::parse(tokens);
+        if let Err(e) = result {
+            error::report(e);
+            return;
+        }
+        let statements = result.unwrap();
+
+        let result = self.interpreter.interpret(statements);
+        if let Err(e) = result {
+            error::runtime_error(e);
+        }
     }
 }
 

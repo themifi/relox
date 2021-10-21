@@ -10,6 +10,7 @@ mod interpreter;
 mod lox;
 mod parser;
 mod scanner;
+mod statement;
 mod token;
 mod value;
 
@@ -60,11 +61,5 @@ fn run_prompt() {
 
 fn run(source: String) {
     let lox = lox::Lox::new();
-    let result = lox.run(source);
-    if let Err(e) = result {
-        match e {
-            lox::Error::Runtime(e) => error::runtime_error(e),
-            _ => error::report(e),
-        }
-    }
+    lox.run(source);
 }
