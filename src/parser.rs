@@ -812,5 +812,144 @@ mod tests {
             "[line 3] Error: expression expected",
             format!("{}", Error::ExpressionExpected { line: 3 })
         );
+        assert_eq!(
+            "[line 3] Error: expect ';' after expression",
+            format!("{}", Error::ExpectSemicolonAfterExpression { line: 3 })
+        );
+        assert_eq!(
+            "[line 3] Error: expect ';' after value",
+            format!("{}", Error::ExpectSemicolonAfterValue { line: 3 })
+        );
+    }
+
+    #[test]
+    fn parse_till_end() {
+        let tokens = vec![
+            Token {
+                t: TokenType::Number,
+                lexeme: String::new(),
+                literal: Some(TokenLiteral::Number(2.0)),
+                line: 1,
+            },
+            Token {
+                t: TokenType::Semicolon,
+                lexeme: String::new(),
+                literal: None,
+                line: 1,
+            },
+            Token {
+                t: TokenType::Number,
+                lexeme: String::new(),
+                literal: Some(TokenLiteral::Number(2.0)),
+                line: 2,
+            },
+            Token {
+                t: TokenType::Semicolon,
+                lexeme: String::new(),
+                literal: None,
+                line: 2,
+            },
+            Token {
+                t: TokenType::Eof,
+                lexeme: String::new(),
+                literal: None,
+                line: 2,
+            },
+        ];
+        let res = parse(tokens).unwrap();
+        assert_eq!(2, res.len());
+    }
+
+    fn parse_statement(tokens: Vec<Token>) -> StatementResult {
+        let mut reader = Reader::new(tokens);
+        statement(&mut reader)
+    }
+
+    #[test]
+    fn parse_print_statement() {
+        let tokens = vec![
+            Token {
+                t: TokenType::Print,
+                lexeme: String::new(),
+                literal: None,
+                line: 1,
+            },
+            Token {
+                t: TokenType::Number,
+                lexeme: String::new(),
+                literal: Some(TokenLiteral::Number(2.0)),
+                line: 1,
+            },
+            Token {
+                t: TokenType::Semicolon,
+                lexeme: String::new(),
+                literal: None,
+                line: 1,
+            },
+        ];
+
+        let tree = parse_statement(tokens).unwrap();
+
+        assert_eq!("(print statement)", format!("{}", tree));
+    }
+
+    #[test]
+    fn parse_expression_statement() {
+        let tokens = vec![
+            Token {
+                t: TokenType::Number,
+                lexeme: String::new(),
+                literal: Some(TokenLiteral::Number(2.0)),
+                line: 1,
+            },
+            Token {
+                t: TokenType::Semicolon,
+                lexeme: String::new(),
+                literal: None,
+                line: 1,
+            },
+        ];
+
+        let tree = parse_statement(tokens).unwrap();
+
+        assert_eq!("(expression statement)", format!("{}", tree));
+    }
+
+    #[test]
+    fn parse_expression_statement_without_semicolon() {
+        let tokens = vec![Token {
+            t: TokenType::Number,
+            lexeme: String::new(),
+            literal: Some(TokenLiteral::Number(2.0)),
+            line: 1,
+        }];
+
+        assert_eq!(
+            Error::ExpectSemicolonAfterExpression { line: 1 },
+            parse_statement(tokens).unwrap_err()
+        );
+    }
+
+    #[test]
+    fn parse_expression_without_semicolon() {
+        let tokens = vec![
+            Token {
+                t: TokenType::Print,
+                lexeme: String::new(),
+                literal: None,
+                line: 1,
+            },
+            Token {
+                t: TokenType::Number,
+                lexeme: String::new(),
+                literal: Some(TokenLiteral::Number(2.0)),
+                line: 1,
+            },
+        ];
+
+        assert_eq!(
+            Error::ExpectSemicolonAfterValue { line: 1 },
+            parse_statement(tokens).unwrap_err()
+        );
     }
 }

@@ -1,16 +1,17 @@
-use crate::statement::Statement;
-
 use super::{
     error::RuntimeError,
     expression::{Binary, Expression, Grouping, Literal, Unary, Visitor as ExpressionVisitor},
-    statement::{ExpressionStatement, Print, Visitor as StatementVisitor},
+    statement::{ExpressionStatement, Print, Statement, Visitor as StatementVisitor},
     token::{Literal as TokenLiteral, Token, TokenType},
     value::Value,
 };
+use std::io;
 
-pub struct Interpreter {}
+pub struct Interpreter<'a> {
+    output: &'a mut dyn std::io::Write,
+}
 
-impl ExpressionVisitor for Interpreter {
+impl ExpressionVisitor for Interpreter<'_> {
     fn visit_literal(&self, literal: &Literal) -> ValueResult {
         match &literal.value {
             TokenLiteral::Nil => Ok(Value::Nil),
@@ -95,15 +96,16 @@ impl ExpressionVisitor for Interpreter {
     }
 }
 
-impl StatementVisitor for Interpreter {
+impl StatementVisitor for Interpreter<'_> {
     fn visit_expression_statement(&self, expr: &ExpressionStatement) -> Result {
         self.evaluate(expr.expr.as_ref())?;
         Ok(())
     }
 
-    fn visit_print(&self, print: &Print) -> Result {
+    fn visit_print(&mut self, print: &Print) -> Result {
         let value = self.evaluate(print.expr.as_ref())?;
-        println!("{}", value);
+        writeln!(&mut self.output, "{}", value).unwrap();
+        self.output.flush().unwrap();
         Ok(())
     }
 }
@@ -111,19 +113,19 @@ impl StatementVisitor for Interpreter {
 type ValueResult = std::result::Result<Value, RuntimeError>;
 type Result = std::result::Result<(), RuntimeError>;
 
-impl Interpreter {
-    pub fn new() -> Self {
-        Self {}
+impl<'a> Interpreter<'a> {
+    pub fn new<'b: 'a>(output: &'b mut dyn io::Write) -> Self {
+        Self { output }
     }
 
-    pub fn interpret(&self, statements: Vec<Box<dyn Statement>>) -> Result {
+    pub fn interpret(&mut self, statements: Vec<Box<dyn Statement>>) -> Result {
         for statement in statements {
             self.execute(statement.as_ref())?;
         }
         Ok(())
     }
 
-    fn execute(&self, expr: &dyn Statement) -> Result {
+    fn execute(&mut self, expr: &dyn Statement) -> Result {
         expr.accept(self)
     }
 
@@ -182,12 +184,13 @@ mod tests {
     use super::*;
 
     fn eval(expr: &dyn Expression) -> ValueResult {
-        let interpreter = Interpreter::new();
+        let mut output = io::sink();
+        let interpreter = Interpreter::new(&mut output);
         interpreter.evaluate(expr)
     }
 
     #[test]
-    fn interpret_literal() {
+    fn eval_literal() {
         let literals = vec![
             (TokenLiteral::Nil, Value::Nil),
             (TokenLiteral::Boolean(true), Value::Boolean(true)),
@@ -205,7 +208,7 @@ mod tests {
     }
 
     #[test]
-    fn interpret_number_negation() {
+    fn eval_number_negation() {
         let expr = Unary {
             operator: Token {
                 t: TokenType::Minus,
@@ -221,7 +224,7 @@ mod tests {
     }
 
     #[test]
-    fn interpret_bool_negation() {
+    fn eval_bool_negation() {
         let expr = Unary {
             operator: Token {
                 t: TokenType::Bang,
@@ -237,7 +240,7 @@ mod tests {
     }
 
     #[test]
-    fn interpret_negation_invalid_type() {
+    fn eval_negation_invalid_type() {
         let literals = vec![
             TokenLiteral::Nil,
             TokenLiteral::String("foo".to_owned()),
@@ -263,7 +266,7 @@ mod tests {
     }
 
     #[test]
-    fn interpret_bang() {
+    fn eval_bang() {
         let literals = vec![
             (TokenLiteral::Nil, true),
             (TokenLiteral::String("foo".to_owned()), false),
@@ -286,7 +289,7 @@ mod tests {
     }
 
     #[test]
-    fn interpret_grouping() {
+    fn eval_grouping() {
         let expr = Grouping {
             expr: Box::new(Unary {
                 operator: Token {
@@ -304,7 +307,7 @@ mod tests {
     }
 
     #[test]
-    fn interpret_numbers_operations() {
+    fn eval_numbers_operations() {
         let data = vec![
             (TokenType::Plus, 20.0),
             (TokenType::Minus, 10.0),
@@ -332,7 +335,7 @@ mod tests {
     }
 
     #[test]
-    fn interpret_numbers_operations_with_invalid_operand() {
+    fn eval_numbers_operations_with_invalid_operand() {
         let data = vec![
             TokenType::Minus,
             TokenType::Star,
@@ -375,7 +378,7 @@ mod tests {
     }
 
     #[test]
-    fn interpret_addition_with_invalid_operand() {
+    fn eval_addition_with_invalid_operand() {
         let operands = vec![
             // number with others
             (TokenLiteral::Number(15.0), TokenLiteral::Nil),
@@ -417,7 +420,7 @@ mod tests {
     }
 
     #[test]
-    fn interpret_numbers_comparsion() {
+    fn eval_numbers_comparsion() {
         let data = vec![
             (TokenType::Greater, 2.0, 3.0, false),
             (TokenType::Greater, 3.0, 3.0, false),
@@ -459,7 +462,7 @@ mod tests {
     }
 
     #[test]
-    fn interpret_strings_addition() {
+    fn eval_strings_addition() {
         let expr = Binary {
             left: Box::new(Literal {
                 value: TokenLiteral::String("foo".to_owned()),
@@ -478,7 +481,7 @@ mod tests {
     }
 
     #[test]
-    fn interpret_literal_equality() {
+    fn eval_literal_equality() {
         let data = vec![
             // nil with others
             (TokenLiteral::Nil, TokenLiteral::Nil, true),
@@ -579,5 +582,50 @@ mod tests {
             expr.operator.t = TokenType::BangEqual;
             assert_eq!(Ok(Value::Boolean(!true_result)), eval(&expr));
         }
+    }
+
+    #[test]
+    fn execute_expression_statement() {
+        let mut output = io::sink();
+        let mut interpreter = Interpreter::new(&mut output);
+        let statement = ExpressionStatement {
+            expr: Box::new(Literal {
+                value: TokenLiteral::Boolean(true),
+            }),
+        };
+        assert_eq!(Ok(()), interpreter.execute(&statement));
+    }
+
+    #[test]
+    fn execute_statements() {
+        let mut output = io::sink();
+        let mut interpreter = Interpreter::new(&mut output);
+        let statements: Vec<Box<dyn Statement>> = vec![
+            Box::new(ExpressionStatement {
+                expr: Box::new(Literal {
+                    value: TokenLiteral::Boolean(true),
+                }),
+            }),
+            Box::new(Print {
+                expr: Box::new(Literal {
+                    value: TokenLiteral::Number(42.0),
+                }),
+            }),
+        ];
+        assert_eq!(Ok(()), interpreter.interpret(statements));
+    }
+
+    #[test]
+    fn execute_print() {
+        let mut output = Vec::new();
+        let mut interpreter = Interpreter::new(&mut output);
+        let statement = Print {
+            expr: Box::new(Literal {
+                value: TokenLiteral::Boolean(true),
+            }),
+        };
+        assert_eq!(Ok(()), interpreter.execute(&statement));
+        let output_string = std::str::from_utf8(&output).unwrap();
+        assert_eq!("true\n", output_string);
     }
 }

@@ -60,6 +60,6 @@ fn run_prompt() {
 }
 
 fn run(source: String) {
-    let lox = lox::Lox::new();
+    let mut lox = lox::Lox::new();
     lox.run(source);
 }

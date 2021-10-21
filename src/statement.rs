@@ -12,22 +12,22 @@ pub struct Print {
 }
 
 pub trait Statement: fmt::Display + fmt::Debug {
-    fn accept(&self, visitor: &dyn Visitor) -> Result<(), RuntimeError>;
+    fn accept(&self, visitor: &mut dyn Visitor) -> Result<(), RuntimeError>;
 }
 
 pub trait Visitor {
     fn visit_expression_statement(&self, expr: &ExpressionStatement) -> Result<(), RuntimeError>;
-    fn visit_print(&self, print: &Print) -> Result<(), RuntimeError>;
+    fn visit_print(&mut self, print: &Print) -> Result<(), RuntimeError>;
 }
 
 impl Statement for ExpressionStatement {
-    fn accept(&self, visitor: &dyn Visitor) -> Result<(), RuntimeError> {
+    fn accept(&self, visitor: &mut dyn Visitor) -> Result<(), RuntimeError> {
         visitor.visit_expression_statement(self)
     }
 }
 
 impl Statement for Print {
-    fn accept(&self, visitor: &dyn Visitor) -> Result<(), RuntimeError> {
+    fn accept(&self, visitor: &mut dyn Visitor) -> Result<(), RuntimeError> {
         visitor.visit_print(self)
     }
 }

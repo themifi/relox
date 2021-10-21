@@ -1,22 +1,17 @@
 use super::{error, interpreter, parser, scanner};
-use std::fmt;
+use std::{fmt, io};
 
 pub struct Lox {
     scanner: scanner::Scanner,
-    interpreter: interpreter::Interpreter,
 }
 
 impl Lox {
     pub fn new() -> Self {
         let scanner = scanner::Scanner::new();
-        let interpreter = interpreter::Interpreter::new();
-        Lox {
-            scanner,
-            interpreter,
-        }
+        Lox { scanner }
     }
 
-    pub fn run(&self, source: String) {
+    pub fn run(&mut self, source: String) {
         let result = self.scanner.scan_tokens(source);
         if let Err(e) = result {
             error::report(e);
@@ -31,7 +26,9 @@ impl Lox {
         }
         let statements = result.unwrap();
 
-        let result = self.interpreter.interpret(statements);
+        let mut output = io::stdout();
+        let mut interpreter = interpreter::Interpreter::new(&mut output);
+        let result = interpreter.interpret(statements);
         if let Err(e) = result {
             error::runtime_error(e);
         }
