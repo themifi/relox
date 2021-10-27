@@ -4,6 +4,7 @@ use std::{
     process,
 };
 
+mod environment;
 mod error;
 mod expression;
 mod interpreter;

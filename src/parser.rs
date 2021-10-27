@@ -44,12 +44,7 @@ fn var_declaration(reader: &mut Reader) -> StatementResult {
             line: reader.line(),
         });
     }
-    let name = name
-        .unwrap()
-        .literal
-        .unwrap()
-        .unwrap_identifier()
-        .to_owned();
+    let name = name.unwrap();
 
     let initializer = if reader.peek_type() == Some(TokenType::Equal) {
         reader.advance().unwrap();
@@ -207,8 +202,7 @@ fn primary(reader: &mut Reader) -> ExpressionResult {
             Ok(Box::new(Grouping { expr }))
         }
         Some(TokenType::Identifier) => {
-            let token = reader.advance().unwrap();
-            let name = token.literal.unwrap().unwrap_identifier().to_owned();
+            let name = reader.advance().unwrap();
             Ok(Box::new(Variable { name }))
         }
         None => Err(Error::ExpressionExpected {
@@ -1073,7 +1067,7 @@ mod tests {
     fn parse_identifier() {
         let tokens = vec![Token {
             t: TokenType::Identifier,
-            lexeme: String::new(),
+            lexeme: "foo".to_owned(),
             literal: Some(TokenLiteral::Identifier("foo".to_owned())),
             line: 1,
         }];

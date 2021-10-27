@@ -28,7 +28,7 @@ pub struct Unary {
 
 #[derive(Debug)]
 pub struct Variable {
-    pub name: String,
+    pub name: Token,
 }
 
 pub trait Expression: fmt::Display + fmt::Debug {
@@ -99,7 +99,7 @@ impl fmt::Display for Unary {
 
 impl fmt::Display for Variable {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "(var {})", self.name)
+        write!(f, "(var {})", self.name.lexeme)
     }
 }
 

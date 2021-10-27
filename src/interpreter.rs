@@ -1,4 +1,5 @@
 use super::{
+    environment::Environment,
     error::RuntimeError,
     expression::{
         Binary, Expression, Grouping, Literal, Unary, Variable, Visitor as ExpressionVisitor,
@@ -11,6 +12,7 @@ use std::io;
 
 pub struct Interpreter<'a> {
     output: &'a mut dyn std::io::Write,
+    environment: Environment,
 }
 
 impl ExpressionVisitor for Interpreter<'_> {
@@ -97,8 +99,9 @@ impl ExpressionVisitor for Interpreter<'_> {
         }
     }
 
-    fn visit_variable(&self, _var: &Variable) -> ValueResult {
-        todo!();
+    fn visit_variable(&self, var: &Variable) -> ValueResult {
+        let val = self.environment.get(&var.name)?;
+        Ok(val.clone())
     }
 }
 
@@ -115,8 +118,15 @@ impl StatementVisitor for Interpreter<'_> {
         Ok(())
     }
 
-    fn visit_var(&mut self, _var: &Var) -> Result {
-        todo!();
+    fn visit_var(&mut self, var: &Var) -> Result {
+        let value = if let Some(init) = &var.initializer {
+            self.evaluate(init.as_ref())?
+        } else {
+            Value::Nil
+        };
+
+        self.environment.define(&var.name, value);
+        Ok(())
     }
 }
 
@@ -125,7 +135,11 @@ type Result = std::result::Result<(), RuntimeError>;
 
 impl<'a> Interpreter<'a> {
     pub fn new<'b: 'a>(output: &'b mut dyn io::Write) -> Self {
-        Self { output }
+        let environment = Environment::new();
+        Self {
+            output,
+            environment,
+        }
     }
 
     pub fn interpret(&mut self, statements: Vec<Box<dyn Statement>>) -> Result {
@@ -637,5 +651,45 @@ mod tests {
         assert_eq!(Ok(()), interpreter.execute(&statement));
         let output_string = std::str::from_utf8(&output).unwrap();
         assert_eq!("true\n", output_string);
+    }
+
+    #[test]
+    fn execute_var_statement() {
+        let mut output = io::sink();
+        let mut interpreter = Interpreter::new(&mut output);
+        let name = Token {
+            t: TokenType::Identifier,
+            line: 1,
+            lexeme: String::new(),
+            literal: Some(TokenLiteral::Identifier("foo".to_owned())),
+        };
+        let val = Literal {
+            value: TokenLiteral::Number(2.0),
+        };
+
+        let statements: Vec<Box<dyn Statement>> = vec![Box::new(Var {
+            name: name.clone(),
+            initializer: Some(Box::new(val)),
+        })];
+
+        assert_eq!(Ok(()), interpreter.interpret(statements));
+        assert_eq!(Ok(&Value::Number(2.0)), interpreter.environment.get(&name));
+    }
+
+    #[test]
+    fn eval_var() {
+        let mut output = io::sink();
+        let mut interpreter = Interpreter::new(&mut output);
+        let name = Token {
+            t: TokenType::Identifier,
+            line: 1,
+            lexeme: String::new(),
+            literal: Some(TokenLiteral::Identifier("foo".to_owned())),
+        };
+        let val = Value::Number(2.0);
+        interpreter.environment.define(&name, val);
+
+        let expr = Variable { name: name.clone() };
+        assert_eq!(Ok(Value::Number(2.0)), interpreter.evaluate(&expr));
     }
 }

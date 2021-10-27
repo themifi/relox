@@ -1,4 +1,4 @@
-use super::{error::RuntimeError, expression::Expression};
+use super::{error::RuntimeError, expression::Expression, token::Token};
 use std::fmt;
 
 #[derive(Debug)]
@@ -13,7 +13,7 @@ pub struct Print {
 
 #[derive(Debug)]
 pub struct Var {
-    pub name: String,
+    pub name: Token,
     pub initializer: Option<Box<dyn Expression>>,
 }
 
@@ -60,9 +60,9 @@ impl fmt::Display for Print {
 impl fmt::Display for Var {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if let Some(init) = &self.initializer {
-            write!(f, "(var {} = {})", self.name, init)
+            write!(f, "(var {} = {})", self.name.lexeme, init)
         } else {
-            write!(f, "(var {})", self.name)
+            write!(f, "(var {})", self.name.lexeme)
         }
     }
 }
