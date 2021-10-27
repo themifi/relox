@@ -1,6 +1,8 @@
 use super::{
     error::RuntimeError,
-    expression::{Binary, Expression, Grouping, Literal, Unary, Visitor as ExpressionVisitor},
+    expression::{
+        Binary, Expression, Grouping, Literal, Unary, Variable, Visitor as ExpressionVisitor,
+    },
     statement::{ExpressionStatement, Print, Statement, Var, Visitor as StatementVisitor},
     token::{Literal as TokenLiteral, Token, TokenType},
     value::Value,
@@ -93,6 +95,10 @@ impl ExpressionVisitor for Interpreter<'_> {
             TokenType::BangEqual => Ok(Value::Boolean(!is_equal(&left, &right))),
             _ => unreachable!(),
         }
+    }
+
+    fn visit_variable(&self, _var: &Variable) -> ValueResult {
+        todo!();
     }
 }
 

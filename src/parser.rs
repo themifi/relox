@@ -1,8 +1,8 @@
 use super::{
     error::format_error,
-    expression::{Binary, Expression, Grouping, Literal, Unary},
+    expression::{Binary, Expression, Grouping, Literal, Unary, Variable},
     statement::{ExpressionStatement, Print, Statement, Var},
-    token::{Literal as TokenLiteral, Token, TokenType},
+    token::{Token, TokenType},
 };
 use std::fmt;
 
@@ -44,12 +44,12 @@ fn var_declaration(reader: &mut Reader) -> StatementResult {
             line: reader.line(),
         });
     }
-    let name = name.unwrap().literal.unwrap();
-    let name = if let TokenLiteral::Identifier(i) = name {
-        i
-    } else {
-        panic!("identifier literal is expected for token with identifier type");
-    };
+    let name = name
+        .unwrap()
+        .literal
+        .unwrap()
+        .unwrap_identifier()
+        .to_owned();
 
     let initializer = if reader.peek_type() == Some(TokenType::Equal) {
         reader.advance().unwrap();
@@ -205,6 +205,11 @@ fn primary(reader: &mut Reader) -> ExpressionResult {
                 });
             }
             Ok(Box::new(Grouping { expr }))
+        }
+        Some(TokenType::Identifier) => {
+            let token = reader.advance().unwrap();
+            let name = token.literal.unwrap().unwrap_identifier().to_owned();
+            Ok(Box::new(Variable { name }))
         }
         None => Err(Error::ExpressionExpected {
             line: reader.line(),
@@ -1062,5 +1067,19 @@ mod tests {
 
         let tree = parse_statement(tokens).unwrap();
         assert_eq!("(var foo = 2)", format!("{}", tree));
+    }
+
+    #[test]
+    fn parse_identifier() {
+        let tokens = vec![Token {
+            t: TokenType::Identifier,
+            lexeme: String::new(),
+            literal: Some(TokenLiteral::Identifier("foo".to_owned())),
+            line: 1,
+        }];
+
+        let tree = parse_expression(tokens).unwrap();
+
+        assert_eq!("(var foo)", format!("{}", tree));
     }
 }

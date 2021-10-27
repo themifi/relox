@@ -26,6 +26,11 @@ pub struct Unary {
     pub right: Box<dyn Expression>,
 }
 
+#[derive(Debug)]
+pub struct Variable {
+    pub name: String,
+}
+
 pub trait Expression: fmt::Display + fmt::Debug {
     fn accept(&self, visitor: &dyn Visitor) -> Result<Value, RuntimeError>;
 }
@@ -35,6 +40,7 @@ pub trait Visitor {
     fn visit_grouping(&self, grouping: &Grouping) -> Result<Value, RuntimeError>;
     fn visit_literal(&self, literal: &Literal) -> Result<Value, RuntimeError>;
     fn visit_unary(&self, unary: &Unary) -> Result<Value, RuntimeError>;
+    fn visit_variable(&self, var: &Variable) -> Result<Value, RuntimeError>;
 }
 
 impl Expression for Binary {
@@ -61,6 +67,12 @@ impl Expression for Unary {
     }
 }
 
+impl Expression for Variable {
+    fn accept(&self, visitor: &dyn Visitor) -> Result<Value, RuntimeError> {
+        visitor.visit_variable(self)
+    }
+}
+
 impl fmt::Display for Binary {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "({} {} {})", self.operator.t, self.left, self.right)
@@ -82,6 +94,12 @@ impl fmt::Display for Literal {
 impl fmt::Display for Unary {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "({} {})", self.operator.t, self.right)
+    }
+}
+
+impl fmt::Display for Variable {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "(var {})", self.name)
     }
 }
 
@@ -124,7 +142,7 @@ mod tests {
         let expr = Literal {
             value: TokenLiteral::Identifier("foo".to_owned()),
         };
-        assert_eq!("foo", format!("{}", expr));
+        assert_eq!("(var foo)", format!("{}", expr));
     }
 
     #[test]
