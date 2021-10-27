@@ -1,7 +1,7 @@
 use super::{
     error::RuntimeError,
     expression::{Binary, Expression, Grouping, Literal, Unary, Visitor as ExpressionVisitor},
-    statement::{ExpressionStatement, Print, Statement, Visitor as StatementVisitor},
+    statement::{ExpressionStatement, Print, Statement, Var, Visitor as StatementVisitor},
     token::{Literal as TokenLiteral, Token, TokenType},
     value::Value,
 };
@@ -107,6 +107,10 @@ impl StatementVisitor for Interpreter<'_> {
         writeln!(&mut self.output, "{}", value).unwrap();
         self.output.flush().unwrap();
         Ok(())
+    }
+
+    fn visit_var(&mut self, _var: &Var) -> Result {
+        todo!();
     }
 }
 

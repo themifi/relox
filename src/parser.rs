@@ -1,8 +1,8 @@
 use super::{
     error::format_error,
     expression::{Binary, Expression, Grouping, Literal, Unary},
-    statement::{ExpressionStatement, Print, Statement},
-    token::{Token, TokenType},
+    statement::{ExpressionStatement, Print, Statement, Var},
+    token::{Literal as TokenLiteral, Token, TokenType},
 };
 use std::fmt;
 
@@ -16,16 +16,55 @@ pub fn parse(tokens: Vec<Token>) -> StatementsResult {
     Ok(statements)
 }
 
-type StatementsResult = std::result::Result<Vec<Box<dyn Statement>>, Error>;
-type StatementResult = std::result::Result<Box<dyn Statement>, Error>;
-type ExpressionResult = std::result::Result<Box<dyn Expression>, Error>;
+type StatementsResult = Result<Vec<Box<dyn Statement>>, Error>;
+type StatementResult = Result<Box<dyn Statement>, Error>;
+type ExpressionResult = Result<Box<dyn Expression>, Error>;
 
 fn parse_with_reader(reader: &mut Reader) -> StatementResult {
-    let result = statement(reader);
+    let result = declaration(reader);
     if result.is_err() {
         syncronize(reader);
     }
     result
+}
+
+fn declaration(reader: &mut Reader) -> StatementResult {
+    if let Some(TokenType::Var) = reader.peek_type() {
+        reader.advance();
+        var_declaration(reader)
+    } else {
+        statement(reader)
+    }
+}
+
+fn var_declaration(reader: &mut Reader) -> StatementResult {
+    let name = reader.advance();
+    if name.as_ref().map(|x| x.t) != Some(TokenType::Identifier) {
+        return Err(Error::ExpectVariableName {
+            line: reader.line(),
+        });
+    }
+    let name = name.unwrap().literal.unwrap();
+    let name = if let TokenLiteral::Identifier(i) = name {
+        i
+    } else {
+        panic!("identifier literal is expected for token with identifier type");
+    };
+
+    let initializer = if reader.peek_type() == Some(TokenType::Equal) {
+        reader.advance().unwrap();
+        Some(expression(reader)?)
+    } else {
+        None
+    };
+
+    let token_type = reader.advance().map(|x| x.t);
+    if token_type != Some(TokenType::Semicolon) {
+        return Err(Error::ExpectSemicolonAfterVariableDeclaration {
+            line: reader.line(),
+        });
+    }
+    Ok(Box::new(Var { name, initializer }))
 }
 
 fn statement(reader: &mut Reader) -> StatementResult {
@@ -208,6 +247,8 @@ pub enum Error {
     ExpressionExpected { line: usize },
     ExpectSemicolonAfterValue { line: usize },
     ExpectSemicolonAfterExpression { line: usize },
+    ExpectSemicolonAfterVariableDeclaration { line: usize },
+    ExpectVariableName { line: usize },
 }
 
 impl fmt::Display for Error {
@@ -224,6 +265,10 @@ impl fmt::Display for Error {
             Self::ExpectSemicolonAfterExpression { line } => {
                 format_error(line, "expect ';' after expression")
             }
+            Self::ExpectSemicolonAfterVariableDeclaration { line } => {
+                format_error(line, "expect ';' after variable declaration")
+            }
+            Self::ExpectVariableName { line } => format_error(line, "expect ';' variable name"),
         };
         write!(f, "{}", msg)
     }
@@ -862,7 +907,7 @@ mod tests {
 
     fn parse_statement(tokens: Vec<Token>) -> StatementResult {
         let mut reader = Reader::new(tokens);
-        statement(&mut reader)
+        declaration(&mut reader)
     }
 
     #[test]
@@ -951,5 +996,71 @@ mod tests {
             Error::ExpectSemicolonAfterValue { line: 1 },
             parse_statement(tokens).unwrap_err()
         );
+    }
+
+    #[test]
+    fn parse_var_declaration_without_initializer() {
+        let tokens = vec![
+            Token {
+                t: TokenType::Var,
+                lexeme: String::new(),
+                literal: None,
+                line: 1,
+            },
+            Token {
+                t: TokenType::Identifier,
+                lexeme: "foo".to_owned(),
+                literal: Some(TokenLiteral::Identifier("foo".to_owned())),
+                line: 1,
+            },
+            Token {
+                t: TokenType::Semicolon,
+                lexeme: String::new(),
+                literal: None,
+                line: 1,
+            },
+        ];
+
+        let tree = parse_statement(tokens).unwrap();
+        assert_eq!("(var foo)", format!("{}", tree));
+    }
+
+    #[test]
+    fn parse_var_declaration_with_initializer() {
+        let tokens = vec![
+            Token {
+                t: TokenType::Var,
+                lexeme: String::new(),
+                literal: None,
+                line: 1,
+            },
+            Token {
+                t: TokenType::Identifier,
+                lexeme: "foo".to_owned(),
+                literal: Some(TokenLiteral::Identifier("foo".to_owned())),
+                line: 1,
+            },
+            Token {
+                t: TokenType::Equal,
+                lexeme: String::new(),
+                literal: None,
+                line: 1,
+            },
+            Token {
+                t: TokenType::Number,
+                lexeme: String::new(),
+                literal: Some(TokenLiteral::Number(2.0)),
+                line: 1,
+            },
+            Token {
+                t: TokenType::Semicolon,
+                lexeme: String::new(),
+                literal: None,
+                line: 1,
+            },
+        ];
+
+        let tree = parse_statement(tokens).unwrap();
+        assert_eq!("(var foo = 2)", format!("{}", tree));
     }
 }
