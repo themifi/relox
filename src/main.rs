@@ -29,7 +29,9 @@ fn main() {
 
 fn run_file(file: String) {
     let text = fs::read_to_string(file).expect("file read failed");
-    run(text);
+    let mut stdout = io::stdout();
+    let mut lox = lox::Lox::new(&mut stdout);
+    lox.run(text);
     unsafe {
         if error::HAD_ERROR {
             process::exit(65);
@@ -41,6 +43,8 @@ fn run_file(file: String) {
 
 fn run_prompt() {
     let stdin = io::stdin();
+    let mut stdout = io::stdout();
+    let mut lox = lox::Lox::new(&mut stdout);
     loop {
         print!("> ");
         io::stdout().flush().unwrap();
@@ -52,15 +56,10 @@ fn run_prompt() {
             break;
         }
 
-        run(input);
+        lox.run(input);
 
         unsafe {
             error::HAD_ERROR = false;
         }
     }
-}
-
-fn run(source: String) {
-    let mut lox = lox::Lox::new();
-    lox.run(source);
 }
