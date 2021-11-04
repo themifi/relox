@@ -31,3 +31,41 @@ impl Environment {
 fn unwrap_identifier(t: &Token) -> &str {
     t.literal.as_ref().unwrap().unwrap_identifier()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::token::{Literal, TokenType};
+
+    #[test]
+    fn can_define_var() {
+        let mut env = Environment::new();
+        let val = Value::Number(2.0);
+        let t = Token {
+            t: TokenType::Identifier,
+            lexeme: "foo".to_string(),
+            literal: Some(Literal::Identifier("foo".to_string())),
+            line: 1,
+        };
+
+        env.define(&t, val.clone());
+
+        assert_eq!(Ok(&val), env.get(&t));
+    }
+
+    #[test]
+    fn can_get_undefined_var() {
+        let env = Environment::new();
+        let t = Token {
+            t: TokenType::Identifier,
+            lexeme: "foo".to_string(),
+            literal: Some(Literal::Identifier("foo".to_string())),
+            line: 1,
+        };
+
+        assert_eq!(
+            Err(RuntimeError::UndefinedVariable { token: t.clone() }),
+            env.get(&t)
+        );
+    }
+}
