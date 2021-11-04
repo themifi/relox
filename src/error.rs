@@ -42,7 +42,10 @@ impl fmt::Display for RuntimeError {
             Self::OperandsMustBeTwoNumbersOrTwoStrings { token } => {
                 format_error(token.line, "operands must be two numbers or two strings")
             }
-            Self::UndefinedVariable { token } => format_error(token.line, "undefined variable"),
+            Self::UndefinedVariable { token } => format_error(
+                token.line,
+                format!("undefined variable: '{}'", token.lexeme),
+            ),
         };
         write!(f, "{}", msg)
     }
