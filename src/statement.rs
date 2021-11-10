@@ -22,7 +22,10 @@ pub trait Statement: fmt::Display + fmt::Debug {
 }
 
 pub trait Visitor {
-    fn visit_expression_statement(&self, expr: &ExpressionStatement) -> Result<(), RuntimeError>;
+    fn visit_expression_statement(
+        &mut self,
+        expr: &ExpressionStatement,
+    ) -> Result<(), RuntimeError>;
     fn visit_print(&mut self, print: &Print) -> Result<(), RuntimeError>;
     fn visit_var(&mut self, var: &Var) -> Result<(), RuntimeError>;
 }

@@ -17,6 +17,18 @@ impl Environment {
         self.values.insert(name.to_owned(), value);
     }
 
+    pub fn assign(&mut self, token: &Token, value: Value) -> Result<(), RuntimeError> {
+        let name = unwrap_identifier(token);
+        if self.values.contains_key(name) {
+            self.values.insert(name.to_owned(), value);
+            Ok(())
+        } else {
+            Err(RuntimeError::UndefinedVariable {
+                token: token.clone(),
+            })
+        }
+    }
+
     pub fn get(&self, name: &Token) -> Result<&Value, RuntimeError> {
         let str_name = unwrap_identifier(name);
         match self.values.get(str_name) {

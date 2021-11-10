@@ -2,7 +2,8 @@ use super::{
     environment::Environment,
     error::RuntimeError,
     expression::{
-        Binary, Expression, Grouping, Literal, Unary, Variable, Visitor as ExpressionVisitor,
+        Assign, Binary, Expression, Grouping, Literal, Unary, Variable,
+        Visitor as ExpressionVisitor,
     },
     statement::{ExpressionStatement, Print, Statement, Var, Visitor as StatementVisitor},
     token::{Literal as TokenLiteral, Token, TokenType},
@@ -16,7 +17,7 @@ pub struct Interpreter<'a> {
 }
 
 impl ExpressionVisitor for Interpreter<'_> {
-    fn visit_literal(&self, literal: &Literal) -> ValueResult {
+    fn visit_literal(&mut self, literal: &Literal) -> ValueResult {
         match &literal.value {
             TokenLiteral::Nil => Ok(Value::Nil),
             TokenLiteral::Boolean(b) => Ok(Value::Boolean(*b)),
@@ -26,11 +27,11 @@ impl ExpressionVisitor for Interpreter<'_> {
         }
     }
 
-    fn visit_grouping(&self, grouping: &Grouping) -> ValueResult {
+    fn visit_grouping(&mut self, grouping: &Grouping) -> ValueResult {
         self.evaluate(grouping.expr.as_ref())
     }
 
-    fn visit_unary(&self, unary: &Unary) -> ValueResult {
+    fn visit_unary(&mut self, unary: &Unary) -> ValueResult {
         let right = self.evaluate(unary.right.as_ref())?;
 
         match unary.operator.t {
@@ -43,7 +44,7 @@ impl ExpressionVisitor for Interpreter<'_> {
         }
     }
 
-    fn visit_binary(&self, binary: &Binary) -> ValueResult {
+    fn visit_binary(&mut self, binary: &Binary) -> ValueResult {
         let left = self.evaluate(binary.left.as_ref())?;
         let right = self.evaluate(binary.right.as_ref())?;
 
@@ -99,14 +100,20 @@ impl ExpressionVisitor for Interpreter<'_> {
         }
     }
 
-    fn visit_variable(&self, var: &Variable) -> ValueResult {
+    fn visit_variable(&mut self, var: &Variable) -> ValueResult {
         let val = self.environment.get(&var.name)?;
         Ok(val.clone())
+    }
+
+    fn visit_assign(&mut self, assign: &Assign) -> ValueResult {
+        let value = self.evaluate(assign.value.as_ref())?;
+        self.environment.assign(&assign.name, value.clone())?;
+        Ok(value)
     }
 }
 
 impl StatementVisitor for Interpreter<'_> {
-    fn visit_expression_statement(&self, expr: &ExpressionStatement) -> Result {
+    fn visit_expression_statement(&mut self, expr: &ExpressionStatement) -> Result {
         self.evaluate(expr.expr.as_ref())?;
         Ok(())
     }
@@ -153,7 +160,7 @@ impl<'a> Interpreter<'a> {
         expr.accept(self)
     }
 
-    fn evaluate(&self, expr: &dyn Expression) -> ValueResult {
+    fn evaluate(&mut self, expr: &dyn Expression) -> ValueResult {
         expr.accept(self)
     }
 }
@@ -209,7 +216,7 @@ mod tests {
 
     fn eval(expr: &dyn Expression) -> ValueResult {
         let mut output = io::sink();
-        let interpreter = Interpreter::new(&mut output);
+        let mut interpreter = Interpreter::new(&mut output);
         interpreter.evaluate(expr)
     }
 
@@ -691,5 +698,29 @@ mod tests {
 
         let expr = Variable { name: name.clone() };
         assert_eq!(Ok(Value::Number(2.0)), interpreter.evaluate(&expr));
+    }
+
+    #[test]
+    fn eval_assignment() {
+        let mut output = io::sink();
+        let mut interpreter = Interpreter::new(&mut output);
+        let identifier = Token {
+            t: TokenType::Identifier,
+            lexeme: "foo".to_owned(),
+            literal: Some(TokenLiteral::Identifier("foo".to_owned())),
+            line: 1,
+        };
+        interpreter.environment.define(&identifier, Value::Nil);
+        let expr = Assign {
+            name: identifier,
+            value: Box::new(Literal {
+                value: TokenLiteral::Number(2.0),
+            }),
+        };
+        assert_eq!(Ok(Value::Number(2.0)), interpreter.evaluate(&expr));
+        assert_eq!(
+            Ok(&Value::Number(2.0)),
+            interpreter.environment.get(&expr.name)
+        );
     }
 }

@@ -1,6 +1,6 @@
 use super::{
     error::format_error,
-    expression::{Binary, Expression, Grouping, Literal, Unary, Variable},
+    expression::{Assign, Binary, Expression, Grouping, Literal, Unary, Variable},
     statement::{ExpressionStatement, Print, Statement, Var},
     token::{Token, TokenType},
 };
@@ -94,7 +94,25 @@ fn expression_statement(reader: &mut Reader) -> StatementResult {
 }
 
 fn expression(reader: &mut Reader) -> ExpressionResult {
-    equality(reader)
+    assignment(reader)
+}
+
+fn assignment(reader: &mut Reader) -> ExpressionResult {
+    let expr = equality(reader)?;
+
+    if let Some(TokenType::Equal) = reader.peek_type() {
+        let equals = reader.advance().unwrap();
+        let value = assignment(reader)?;
+
+        if expr.is_variable() {
+            let name = expr.unwrap_variable().name.clone();
+            return Ok(Box::new(Assign { name, value }));
+        }
+
+        return Err(Error::InvalidAssignmentTarget { line: equals.line });
+    }
+
+    Ok(expr)
 }
 
 fn equality(reader: &mut Reader) -> ExpressionResult {
@@ -248,6 +266,7 @@ pub enum Error {
     ExpectSemicolonAfterExpression { line: usize },
     ExpectSemicolonAfterVariableDeclaration { line: usize },
     ExpectVariableName { line: usize },
+    InvalidAssignmentTarget { line: usize },
 }
 
 impl fmt::Display for Error {
@@ -268,6 +287,9 @@ impl fmt::Display for Error {
                 format_error(line, "expect ';' after variable declaration")
             }
             Self::ExpectVariableName { line } => format_error(line, "expect ';' variable name"),
+            Self::InvalidAssignmentTarget { line } => {
+                format_error(line, "invalid assignment target")
+            }
         };
         write!(f, "{}", msg)
     }
@@ -1075,5 +1097,61 @@ mod tests {
         let tree = parse_expression(tokens).unwrap();
 
         assert_eq!("(var foo)", format!("{}", tree));
+    }
+
+    #[test]
+    fn test_assignment_expression() {
+        let tokens = vec![
+            Token {
+                t: TokenType::Identifier,
+                lexeme: "foo".to_owned(),
+                literal: Some(TokenLiteral::Identifier("foo".to_owned())),
+                line: 1,
+            },
+            Token {
+                t: TokenType::Equal,
+                lexeme: String::new(),
+                literal: None,
+                line: 1,
+            },
+            Token {
+                t: TokenType::String,
+                lexeme: "bar".to_owned(),
+                literal: Some(TokenLiteral::String("bar".to_owned())),
+                line: 1,
+            },
+        ];
+
+        let tree = parse_expression(tokens).unwrap();
+        assert_eq!("(assign foo = \"bar\")", format!("{}", tree));
+    }
+
+    #[test]
+    fn test_assignment_expression_with_invalid_target() {
+        let tokens = vec![
+            Token {
+                t: TokenType::String,
+                lexeme: String::new(),
+                literal: Some(TokenLiteral::Number(2.0)),
+                line: 1,
+            },
+            Token {
+                t: TokenType::Equal,
+                lexeme: String::new(),
+                literal: None,
+                line: 1,
+            },
+            Token {
+                t: TokenType::String,
+                lexeme: "bar".to_owned(),
+                literal: Some(TokenLiteral::String("bar".to_owned())),
+                line: 1,
+            },
+        ];
+
+        assert_eq!(
+            Error::InvalidAssignmentTarget { line: 1 },
+            parse_expression(tokens).unwrap_err()
+        );
     }
 }

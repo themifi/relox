@@ -31,45 +31,74 @@ pub struct Variable {
     pub name: Token,
 }
 
+#[derive(Debug)]
+pub struct Assign {
+    pub name: Token,
+    pub value: Box<dyn Expression>,
+}
+
 pub trait Expression: fmt::Display + fmt::Debug {
-    fn accept(&self, visitor: &dyn Visitor) -> Result<Value, RuntimeError>;
+    fn accept(&self, visitor: &mut dyn Visitor) -> Result<Value, RuntimeError>;
+
+    fn is_variable(&self) -> bool {
+        false
+    }
+
+    fn unwrap_variable(&self) -> &Variable {
+        panic!("called unwrap_variable on non variable expression")
+    }
 }
 
 pub trait Visitor {
-    fn visit_binary(&self, binary: &Binary) -> Result<Value, RuntimeError>;
-    fn visit_grouping(&self, grouping: &Grouping) -> Result<Value, RuntimeError>;
-    fn visit_literal(&self, literal: &Literal) -> Result<Value, RuntimeError>;
-    fn visit_unary(&self, unary: &Unary) -> Result<Value, RuntimeError>;
-    fn visit_variable(&self, var: &Variable) -> Result<Value, RuntimeError>;
+    fn visit_binary(&mut self, binary: &Binary) -> Result<Value, RuntimeError>;
+    fn visit_grouping(&mut self, grouping: &Grouping) -> Result<Value, RuntimeError>;
+    fn visit_literal(&mut self, literal: &Literal) -> Result<Value, RuntimeError>;
+    fn visit_unary(&mut self, unary: &Unary) -> Result<Value, RuntimeError>;
+    fn visit_variable(&mut self, var: &Variable) -> Result<Value, RuntimeError>;
+    fn visit_assign(&mut self, assign: &Assign) -> Result<Value, RuntimeError>;
 }
 
 impl Expression for Binary {
-    fn accept(&self, visitor: &dyn Visitor) -> Result<Value, RuntimeError> {
+    fn accept(&self, visitor: &mut dyn Visitor) -> Result<Value, RuntimeError> {
         visitor.visit_binary(self)
     }
 }
 
 impl Expression for Grouping {
-    fn accept(&self, visitor: &dyn Visitor) -> Result<Value, RuntimeError> {
+    fn accept(&self, visitor: &mut dyn Visitor) -> Result<Value, RuntimeError> {
         visitor.visit_grouping(self)
     }
 }
 
 impl Expression for Literal {
-    fn accept(&self, visitor: &dyn Visitor) -> Result<Value, RuntimeError> {
+    fn accept(&self, visitor: &mut dyn Visitor) -> Result<Value, RuntimeError> {
         visitor.visit_literal(self)
     }
 }
 
 impl Expression for Unary {
-    fn accept(&self, visitor: &dyn Visitor) -> Result<Value, RuntimeError> {
+    fn accept(&self, visitor: &mut dyn Visitor) -> Result<Value, RuntimeError> {
         visitor.visit_unary(self)
     }
 }
 
 impl Expression for Variable {
-    fn accept(&self, visitor: &dyn Visitor) -> Result<Value, RuntimeError> {
+    fn accept(&self, visitor: &mut dyn Visitor) -> Result<Value, RuntimeError> {
         visitor.visit_variable(self)
+    }
+
+    fn is_variable(&self) -> bool {
+        true
+    }
+
+    fn unwrap_variable(&self) -> &Variable {
+        self
+    }
+}
+
+impl Expression for Assign {
+    fn accept(&self, visitor: &mut dyn Visitor) -> Result<Value, RuntimeError> {
+        visitor.visit_assign(self)
     }
 }
 
@@ -100,6 +129,12 @@ impl fmt::Display for Unary {
 impl fmt::Display for Variable {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "(var {})", self.name.lexeme)
+    }
+}
+
+impl fmt::Display for Assign {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "(assign {} = {})", self.name.lexeme, self.value)
     }
 }
 
