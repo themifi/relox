@@ -137,7 +137,19 @@ impl fmt::Display for Literal {
             Literal::Boolean(b) => write!(f, "{}", b),
             Literal::Number(num) => write!(f, "{}", num),
             Literal::String(ref s) => write!(f, "{:?}", s),
-            Literal::Identifier(ref s) => write!(f, "{}", s),
+            Literal::Identifier(ref s) => write!(f, "(var {})", s),
+        }
+    }
+}
+
+impl Literal {
+    pub fn unwrap_identifier(&self) -> &str {
+        match self {
+            Literal::Identifier(s) => s.as_ref(),
+            _ => panic!(
+                "unwrapping a literal failed: identifier expected, but literal is {}",
+                self
+            ),
         }
     }
 }
@@ -154,7 +166,10 @@ mod tests {
         assert_eq!("2", format!("{}", Literal::Number(2.0)));
         assert_eq!("2.4", format!("{}", Literal::Number(2.4)));
         assert_eq!("\"foo\"", format!("{}", Literal::String("foo".to_owned())));
-        assert_eq!("foo", format!("{}", Literal::Identifier("foo".to_owned())));
+        assert_eq!(
+            "(var foo)",
+            format!("{}", Literal::Identifier("foo".to_owned()))
+        );
     }
 
     #[test]

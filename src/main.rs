@@ -4,12 +4,14 @@ use std::{
     process,
 };
 
+mod environment;
 mod error;
 mod expression;
 mod interpreter;
 mod lox;
 mod parser;
 mod scanner;
+mod statement;
 mod token;
 mod value;
 
@@ -27,7 +29,9 @@ fn main() {
 
 fn run_file(file: String) {
     let text = fs::read_to_string(file).expect("file read failed");
-    run(text);
+    let mut stdout = io::stdout();
+    let mut lox = lox::Lox::new(&mut stdout);
+    lox.run(text);
     unsafe {
         if error::HAD_ERROR {
             process::exit(65);
@@ -39,6 +43,8 @@ fn run_file(file: String) {
 
 fn run_prompt() {
     let stdin = io::stdin();
+    let mut stdout = io::stdout();
+    let mut lox = lox::Lox::new(&mut stdout);
     loop {
         print!("> ");
         io::stdout().flush().unwrap();
@@ -50,21 +56,10 @@ fn run_prompt() {
             break;
         }
 
-        run(input);
+        lox.run(input);
 
         unsafe {
             error::HAD_ERROR = false;
-        }
-    }
-}
-
-fn run(source: String) {
-    let lox = lox::Lox::new();
-    let result = lox.run(source);
-    if let Err(e) = result {
-        match e {
-            lox::Error::Runtime(e) => error::runtime_error(e),
-            _ => error::report(e),
         }
     }
 }

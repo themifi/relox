@@ -27,6 +27,7 @@ pub enum RuntimeError {
     OperandMustBeANumber { token: Token },
     OperandsMustBeNumbers { token: Token },
     OperandsMustBeTwoNumbersOrTwoStrings { token: Token },
+    UndefinedVariable { token: Token },
 }
 
 impl fmt::Display for RuntimeError {
@@ -41,6 +42,10 @@ impl fmt::Display for RuntimeError {
             Self::OperandsMustBeTwoNumbersOrTwoStrings { token } => {
                 format_error(token.line, "operands must be two numbers or two strings")
             }
+            Self::UndefinedVariable { token } => format_error(
+                token.line,
+                format!("undefined variable: '{}'", token.lexeme),
+            ),
         };
         write!(f, "{}", msg)
     }
