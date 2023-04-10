@@ -2,6 +2,7 @@ on:
   push:
     branches:
       - main
+      - bugfix/packaging
 
 name: Release Packaging
 
@@ -20,7 +21,7 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v2
         with:
-          name: relox-x86_64-unknown-linux-gnu
+          name: relox-linux
           path: target/release/relox
 
   windows:
@@ -30,8 +31,6 @@ jobs:
       - uses: actions/checkout@v3
 
       - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: x86_64-pc-windows-gnu
 
       - name: Release Build
         run: cargo build --release
@@ -39,7 +38,7 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v2
         with:
-          name: relox-x86_64-pc-windows-gnu.exe
+          name: relox-windows
           path: target/release/relox.exe
 
   macos:
@@ -49,8 +48,6 @@ jobs:
       - uses: actions/checkout@v3
 
       - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: aarch64-apple-darwin
 
       - name: Release Build
         run: cargo build --release
@@ -58,5 +55,5 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v2
         with:
-          name: relox-aarch64-apple-darwin
+          name: relox-apple
           path: target/release/relox
