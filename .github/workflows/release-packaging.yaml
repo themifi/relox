@@ -6,27 +6,57 @@ on:
 name: Release Packaging
 
 jobs:
-  release:
-    name: Release Packaging
+  linux:
+    name: Release Packaging for Linux
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
 
       - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: x86_64-unknown-linux-gnu, x86_64-pc-windows-gnu, aarch64-apple-darwin
-
-      - name: Install mingw-w64
-        run: sudo apt-get install -y mingw-w64
 
       - name: Release Build
-        run: cargo build --release --target x86_64-unknown-linux-gnu --target x86_64-pc-windows-gnu --target aarch64-apple-darwin
+        run: cargo build --release
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v2
         with:
-          name: relox
-          path: |
-            target/x86_64-unknown-linux-gnu/release/relox
-            target/x86_64-pc-windows-gnu/release/relox.exe
-            target/aarch64-apple-darwin/release/relox
+          name: relox-x86_64-unknown-linux-gnu
+          path: target/release/relox
+
+  windows:
+    name: Release Packaging for Windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-gnu
+
+      - name: Release Build
+        run: cargo build --release
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: relox-x86_64-pc-windows-gnu.exe
+          path: target/release/relox.exe
+
+  macos:
+    name: Release Packaging for MacOS
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
+
+      - name: Release Build
+        run: cargo build --release
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: relox-aarch64-apple-darwin
+          path: target/release/relox
