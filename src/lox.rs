@@ -1,27 +1,40 @@
-use super::{error, interpreter, parser, scanner, value::Value};
-use std::fmt;
+use super::{error, interpreter, parser, scanner};
+use std::{fmt, io};
 
-pub struct Lox {
+pub struct Lox<'a> {
     scanner: scanner::Scanner,
-    interpreter: interpreter::Interpreter,
+    interpreter: interpreter::Interpreter<'a>,
 }
 
-impl Lox {
-    pub fn new() -> Self {
+impl<'a> Lox<'a> {
+    pub fn new<'b: 'a>(output: &'b mut dyn io::Write) -> Self {
         let scanner = scanner::Scanner::new();
-        let interpreter = interpreter::Interpreter::new();
+        let interpreter = interpreter::Interpreter::new(output);
         Lox {
             scanner,
             interpreter,
         }
     }
 
-    pub fn run(&self, source: String) -> Result<Value, Error> {
-        let tokens = self.scanner.scan_tokens(source)?;
-        let expression = parser::parse(tokens)?;
-        self.interpreter
-            .interpret(expression.as_ref())
-            .map_err(|e| e.into())
+    pub fn run(&mut self, source: String) {
+        let result = self.scanner.scan_tokens(source);
+        if let Err(e) = result {
+            error::report(e);
+            return;
+        }
+        let tokens = result.unwrap();
+
+        let result = parser::parse(tokens);
+        if let Err(e) = result {
+            error::report(e);
+            return;
+        }
+        let statements = result.unwrap();
+
+        let result = self.interpreter.interpret(statements);
+        if let Err(e) = result {
+            error::runtime_error(e);
+        }
     }
 }
 
