@@ -12,15 +12,14 @@ jobs:
       PROJECT_NAME_UNDERSCORE: relox
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
+      - uses: actions/checkout@v3
+
+      - uses: dtolnay/rust-toolchain@stable
+
       - name: Release Build
         run: cargo build --release
-      - name: 'Upload Artifact'
+
+      - name: Upload Artifact
         uses: actions/upload-artifact@v2
         with:
           name: ${{ env.PROJECT_NAME_UNDERSCORE }}
