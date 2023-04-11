@@ -1,8 +1,7 @@
 use std::{
-    fs,
+    fmt, fs,
     io::{self, Write},
     process,
-    fmt,
 };
 use wasm_bindgen::prelude::*;
 
