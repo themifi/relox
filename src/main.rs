@@ -1,5 +1,5 @@
-use std::env;
 use relox::{run_file, run_prompt};
+use std::env;
 
 fn main() {
     let mut args = env::args();

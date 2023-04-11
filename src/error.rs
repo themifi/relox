@@ -1,15 +1,16 @@
 use super::token::Token;
 use std::fmt;
+use std::fmt::Write;
 
-pub fn report<T: fmt::Display>(e: T) {
-    eprintln!("{}", e);
+pub fn report<T: fmt::Display>(e: T, stderr: &mut dyn Write) {
+    writeln!(stderr, "{}", e).unwrap();
     unsafe {
         HAD_ERROR = true;
     }
 }
 
-pub fn runtime_error<T: fmt::Display>(e: T) {
-    eprintln!("{}", e);
+pub fn runtime_error<T: fmt::Display>(e: T, stderr: &mut dyn Write) {
+    writeln!(stderr, "{}", e).unwrap();
     unsafe {
         HAD_RUNTIME_ERROR = true;
     }

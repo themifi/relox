@@ -2,7 +2,9 @@ use std::{
     fs,
     io::{self, Write},
     process,
+    fmt,
 };
+use wasm_bindgen::prelude::*;
 
 mod error;
 mod expression;
@@ -46,13 +48,25 @@ pub fn run_prompt() {
     }
 }
 
+#[wasm_bindgen]
+pub fn run_with_string_output(source: String) -> String {
+    let mut output = String::new();
+    run_with_output(source, &mut output);
+    output
+}
+
 fn run(source: String) {
+    let output = run_with_string_output(source);
+    println!("{}", output);
+}
+
+fn run_with_output(source: String, output: &mut dyn fmt::Write) {
     let lox = lox::Lox::new();
     let result = lox.run(source);
     if let Err(e) = result {
         match e {
-            lox::Error::Runtime(e) => error::runtime_error(e),
-            _ => error::report(e),
+            lox::Error::Runtime(e) => error::runtime_error(e, output),
+            _ => error::report(e, output),
         }
     }
 }
