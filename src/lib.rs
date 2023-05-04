@@ -75,18 +75,16 @@ fn run_with_output(source: String, output: &mut dyn fmt::Write) -> Option<ExecEr
             writeln!(output, "{}", value).unwrap();
             None
         }
-        Err(e) => {
-            match e {
-                lox::Error::Runtime(e) => {
-                    error::report(e, output);
-                    Some(ExecErrorType::RuntimeError)
-                }
-                _ => {
-                    error::report(e, output);
-                    Some(ExecErrorType::GeneralError)
-                }
+        Err(e) => match e {
+            lox::Error::Runtime(e) => {
+                error::report(e, output);
+                Some(ExecErrorType::RuntimeError)
             }
-        }
+            _ => {
+                error::report(e, output);
+                Some(ExecErrorType::GeneralError)
+            }
+        },
     }
 }
 
