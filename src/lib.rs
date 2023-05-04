@@ -16,7 +16,7 @@ mod value;
 
 pub fn run_file(file: String) {
     let text = fs::read_to_string(file).expect("file read failed");
-    run(text);
+    run_print_stdout(text);
     unsafe {
         if error::HAD_ERROR {
             process::exit(65);
@@ -39,7 +39,7 @@ pub fn run_prompt() {
             break;
         }
 
-        run(input);
+        run_print_stdout(input);
 
         unsafe {
             error::HAD_ERROR = false;
@@ -54,7 +54,7 @@ pub fn run_with_string_output(source: String) -> String {
     output
 }
 
-fn run(source: String) {
+fn run_print_stdout(source: String) {
     let output = run_with_string_output(source);
     println!("{}", output);
 }
