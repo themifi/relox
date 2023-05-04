@@ -16,12 +16,11 @@ mod value;
 
 pub fn run_file(file: String) {
     let text = fs::read_to_string(file).expect("file read failed");
-    run_print_stdout(text);
-    unsafe {
-        if error::HAD_ERROR {
-            process::exit(65);
-        } else if error::HAD_RUNTIME_ERROR {
-            process::exit(70);
+    let err = run_print_stdout(text);
+    if let Some(err) = err {
+        match err {
+            ExecErrorType::RuntimeError => process::exit(70),
+            _ => process::exit(65),
         }
     }
 }
@@ -48,24 +47,54 @@ pub fn run_prompt() {
 }
 
 #[wasm_bindgen]
-pub fn run_with_string_output(source: String) -> String {
+pub fn run_wasm(source: String) -> String {
+    let result = run_with_result(source);
+    result.output
+}
+
+fn run_print_stdout(source: String) -> Option<ExecErrorType> {
+    let result = run_with_result(source);
+    println!("{}", result.output);
+    result.err
+}
+
+fn run_with_result(source: String) -> ExecutionResult {
     let mut output = String::new();
-    run_with_output(source, &mut output);
-    output
+    let err = run_with_output(source, &mut output);
+    ExecutionResult { output, err }
 }
 
-fn run_print_stdout(source: String) {
-    let output = run_with_string_output(source);
-    println!("{}", output);
+struct ExecutionResult {
+    output: String,
+    err: Option<ExecErrorType>,
 }
 
-fn run_with_output(source: String, output: &mut dyn fmt::Write) {
+// Execute the source and write to the output.
+// Return type of error if there was any.
+// The error is already printed in the output.
+fn run_with_output(source: String, output: &mut dyn fmt::Write) -> Option<ExecErrorType> {
     let lox = lox::Lox::new();
-    let result = lox.run(source);
-    if let Err(e) = result {
-        match e {
-            lox::Error::Runtime(e) => error::runtime_error(e, output),
-            _ => error::report(e, output),
+    match lox.run(source) {
+        Ok(value) => {
+            writeln!(output, "{}", value).unwrap();
+            None
+        }
+        Err(e) => {
+            match e {
+                lox::Error::Runtime(e) => {
+                    error::runtime_error(e, output);
+                    Some(ExecErrorType::RuntimeError)
+                }
+                _ => {
+                    error::report(e, output);
+                    Some(ExecErrorType::GeneralError)
+                }
+            }
         }
     }
+}
+
+enum ExecErrorType {
+    RuntimeError,
+    GeneralError,
 }
