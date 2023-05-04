@@ -39,10 +39,6 @@ pub fn run_prompt() {
         }
 
         run_print_stdout(input);
-
-        unsafe {
-            error::HAD_ERROR = false;
-        }
     }
 }
 
@@ -82,7 +78,7 @@ fn run_with_output(source: String, output: &mut dyn fmt::Write) -> Option<ExecEr
         Err(e) => {
             match e {
                 lox::Error::Runtime(e) => {
-                    error::runtime_error(e, output);
+                    error::report(e, output);
                     Some(ExecErrorType::RuntimeError)
                 }
                 _ => {

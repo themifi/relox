@@ -4,20 +4,7 @@ use std::fmt::Write;
 
 pub fn report<T: fmt::Display>(e: T, stderr: &mut dyn Write) {
     writeln!(stderr, "{}", e).unwrap();
-    unsafe {
-        HAD_ERROR = true;
-    }
 }
-
-pub fn runtime_error<T: fmt::Display>(e: T, stderr: &mut dyn Write) {
-    writeln!(stderr, "{}", e).unwrap();
-    unsafe {
-        HAD_RUNTIME_ERROR = true;
-    }
-}
-
-pub static mut HAD_ERROR: bool = false;
-pub static mut HAD_RUNTIME_ERROR: bool = false;
 
 pub fn format_error<T: AsRef<str>>(line: usize, message: T) -> String {
     format!("[line {}] Error: {}", line, message.as_ref())
