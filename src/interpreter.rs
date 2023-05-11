@@ -1,6 +1,6 @@
 use super::{
     error::RuntimeError,
-    expression::{Binary, Expression, Grouping, Literal, Unary, Visitor},
+    expression::{walk_expr, Expression, Visitor},
     token::{Literal as TokenLiteral, Token, TokenType},
     value::Value,
 };
@@ -8,8 +8,10 @@ use super::{
 pub struct Interpreter {}
 
 impl Visitor for Interpreter {
-    fn visit_literal(&self, literal: &Literal) -> Result {
-        match &literal.value {
+    type Result = Result;
+
+    fn visit_literal(&self, value: &TokenLiteral) -> Result {
+        match value {
             TokenLiteral::Nil => Ok(Value::Nil),
             TokenLiteral::Boolean(b) => Ok(Value::Boolean(*b)),
             TokenLiteral::Number(num) => Ok(Value::Number(*num)),
@@ -18,16 +20,16 @@ impl Visitor for Interpreter {
         }
     }
 
-    fn visit_grouping(&self, grouping: &Grouping) -> Result {
-        self.evaluate(grouping.expr.as_ref())
+    fn visit_grouping(&self, expr: &Expression) -> Result {
+        self.evaluate(expr)
     }
 
-    fn visit_unary(&self, unary: &Unary) -> Result {
-        let right = self.evaluate(unary.right.as_ref())?;
+    fn visit_unary(&self, operator: &Token, right: &Expression) -> Result {
+        let right = self.evaluate(right)?;
 
-        match unary.operator.t {
+        match operator.t {
             TokenType::Minus => {
-                check_number_operand(&right, &unary.operator)?;
+                check_number_operand(&right, operator)?;
                 Ok(Value::Number(-right.unwrap_number()))
             }
             TokenType::Bang => Ok(Value::Boolean(!is_truthy(&right))),
@@ -35,11 +37,11 @@ impl Visitor for Interpreter {
         }
     }
 
-    fn visit_binary(&self, binary: &Binary) -> Result {
-        let left = self.evaluate(binary.left.as_ref())?;
-        let right = self.evaluate(binary.right.as_ref())?;
+    fn visit_binary(&self, left: &Expression, operator: &Token, right: &Expression) -> Result {
+        let left = self.evaluate(left)?;
+        let right = self.evaluate(right)?;
 
-        match binary.operator.t {
+        match operator.t {
             TokenType::Plus => {
                 if left.is_number() && right.is_number() {
                     Ok(Value::Number(left.unwrap_number() + right.unwrap_number()))
@@ -49,38 +51,38 @@ impl Visitor for Interpreter {
                     Ok(Value::String(format!("{}{}", left, right)))
                 } else {
                     Err(RuntimeError::OperandsMustBeTwoNumbersOrTwoStrings {
-                        token: binary.operator.clone(),
+                        token: operator.clone(),
                     })
                 }
             }
             TokenType::Minus => {
-                check_number_operands(&left, &right, &binary.operator)?;
+                check_number_operands(&left, &right, operator)?;
                 Ok(Value::Number(left.unwrap_number() - right.unwrap_number()))
             }
             TokenType::Slash => {
-                check_number_operands(&left, &right, &binary.operator)?;
+                check_number_operands(&left, &right, operator)?;
                 Ok(Value::Number(left.unwrap_number() / right.unwrap_number()))
             }
             TokenType::Star => {
-                check_number_operands(&left, &right, &binary.operator)?;
+                check_number_operands(&left, &right, operator)?;
                 Ok(Value::Number(left.unwrap_number() * right.unwrap_number()))
             }
             TokenType::Greater => {
-                check_number_operands(&left, &right, &binary.operator)?;
+                check_number_operands(&left, &right, operator)?;
                 Ok(Value::Boolean(left.unwrap_number() > right.unwrap_number()))
             }
             TokenType::GreaterEqual => {
-                check_number_operands(&left, &right, &binary.operator)?;
+                check_number_operands(&left, &right, operator)?;
                 Ok(Value::Boolean(
                     left.unwrap_number() >= right.unwrap_number(),
                 ))
             }
             TokenType::Less => {
-                check_number_operands(&left, &right, &binary.operator)?;
+                check_number_operands(&left, &right, operator)?;
                 Ok(Value::Boolean(left.unwrap_number() < right.unwrap_number()))
             }
             TokenType::LessEqual => {
-                check_number_operands(&left, &right, &binary.operator)?;
+                check_number_operands(&left, &right, operator)?;
                 Ok(Value::Boolean(
                     left.unwrap_number() <= right.unwrap_number(),
                 ))
@@ -97,12 +99,12 @@ impl Interpreter {
         Self {}
     }
 
-    pub fn interpret(&self, expr: &dyn Expression) -> Result {
+    pub fn interpret(&self, expr: &Expression) -> Result {
         self.evaluate(expr)
     }
 
-    fn evaluate(&self, expr: &dyn Expression) -> Result {
-        expr.accept(self)
+    fn evaluate(&self, expr: &Expression) -> Result {
+        walk_expr(expr, self)
     }
 }
 
@@ -157,7 +159,7 @@ fn check_number_operands(
 mod tests {
     use super::*;
 
-    fn interpret(expr: &dyn Expression) -> Result {
+    fn interpret(expr: &Expression) -> Result {
         let interpreter = Interpreter::new();
         interpreter.interpret(expr)
     }
@@ -175,21 +177,21 @@ mod tests {
         ];
 
         for (literal, value) in literals {
-            let expr = Literal { value: literal };
+            let expr = Expression::Literal { value: literal };
             assert_eq!(Ok(value), interpret(&expr));
         }
     }
 
     #[test]
     fn interpret_number_negation() {
-        let expr = Unary {
+        let expr = Expression::Unary {
             operator: Token {
                 t: TokenType::Minus,
                 line: 1,
                 lexeme: "-".to_owned(),
                 literal: None,
             },
-            right: Box::new(Literal {
+            right: Box::new(Expression::Literal {
                 value: TokenLiteral::Number(2.0),
             }),
         };
@@ -198,14 +200,14 @@ mod tests {
 
     #[test]
     fn interpret_bool_negation() {
-        let expr = Unary {
+        let expr = Expression::Unary {
             operator: Token {
                 t: TokenType::Bang,
                 line: 1,
                 lexeme: "!".to_owned(),
                 literal: None,
             },
-            right: Box::new(Literal {
+            right: Box::new(Expression::Literal {
                 value: TokenLiteral::Boolean(true),
             }),
         };
@@ -220,18 +222,19 @@ mod tests {
             TokenLiteral::Boolean(true),
         ];
         for literal in literals {
-            let expr = Unary {
-                operator: Token {
-                    t: TokenType::Minus,
-                    line: 1,
-                    lexeme: String::new(),
-                    literal: None,
-                },
-                right: Box::new(Literal { value: literal }),
+            let operator = Token {
+                t: TokenType::Minus,
+                line: 1,
+                lexeme: String::new(),
+                literal: None,
+            };
+            let expr = Expression::Unary {
+                operator: operator.clone(),
+                right: Box::new(Expression::Literal { value: literal }),
             };
             assert_eq!(
                 Err(RuntimeError::OperandMustBeANumber {
-                    token: expr.operator.clone(),
+                    token: operator.clone(),
                 }),
                 interpret(&expr)
             );
@@ -248,14 +251,14 @@ mod tests {
             (TokenLiteral::Boolean(false), true),
         ];
         for (literal, result) in literals {
-            let expr = Unary {
+            let expr = Expression::Unary {
                 operator: Token {
                     t: TokenType::Bang,
                     line: 1,
                     lexeme: String::new(),
                     literal: None,
                 },
-                right: Box::new(Literal { value: literal }),
+                right: Box::new(Expression::Literal { value: literal }),
             };
             assert_eq!(Ok(Value::Boolean(result)), interpret(&expr));
         }
@@ -263,15 +266,15 @@ mod tests {
 
     #[test]
     fn interpret_grouping() {
-        let expr = Grouping {
-            expr: Box::new(Unary {
+        let expr = Expression::Grouping {
+            expr: Box::new(Expression::Unary {
                 operator: Token {
                     t: TokenType::Bang,
                     line: 1,
                     lexeme: String::new(),
                     literal: None,
                 },
-                right: Box::new(Literal {
+                right: Box::new(Expression::Literal {
                     value: TokenLiteral::Boolean(true),
                 }),
             }),
@@ -289,8 +292,8 @@ mod tests {
         ];
 
         for (token_type, result) in data {
-            let expr = Binary {
-                left: Box::new(Literal {
+            let expr = Expression::Binary {
+                left: Box::new(Expression::Literal {
                     value: TokenLiteral::Number(15.0),
                 }),
                 operator: Token {
@@ -299,7 +302,7 @@ mod tests {
                     lexeme: String::new(),
                     literal: None,
                 },
-                right: Box::new(Literal {
+                right: Box::new(Expression::Literal {
                     value: TokenLiteral::Number(5.0),
                 }),
             };
@@ -330,19 +333,20 @@ mod tests {
             ];
 
             for (left, right) in operands {
-                let expr = Binary {
-                    left: Box::new(Literal { value: left }),
-                    operator: Token {
-                        t: token_type,
-                        line: 1,
-                        lexeme: String::new(),
-                        literal: None,
-                    },
-                    right: Box::new(Literal { value: right }),
+                let operator = Token {
+                    t: token_type,
+                    line: 1,
+                    lexeme: String::new(),
+                    literal: None,
+                };
+                let expr = Expression::Binary {
+                    left: Box::new(Expression::Literal { value: left }),
+                    operator: operator.clone(),
+                    right: Box::new(Expression::Literal { value: right }),
                 };
                 assert_eq!(
                     Err(RuntimeError::OperandsMustBeNumbers {
-                        token: expr.operator.clone()
+                        token: operator.clone()
                     }),
                     interpret(&expr)
                 );
@@ -373,19 +377,20 @@ mod tests {
         ];
 
         for (left, right) in operands {
-            let expr = Binary {
-                left: Box::new(Literal { value: left }),
-                operator: Token {
-                    t: TokenType::Plus,
-                    line: 1,
-                    lexeme: String::new(),
-                    literal: None,
-                },
-                right: Box::new(Literal { value: right }),
+            let operator = Token {
+                t: TokenType::Plus,
+                line: 1,
+                lexeme: String::new(),
+                literal: None,
+            };
+            let expr = Expression::Binary {
+                left: Box::new(Expression::Literal { value: left }),
+                operator: operator.clone(),
+                right: Box::new(Expression::Literal { value: right }),
             };
             assert_eq!(
                 Err(RuntimeError::OperandsMustBeTwoNumbersOrTwoStrings {
-                    token: expr.operator.clone()
+                    token: operator.clone()
                 }),
                 interpret(&expr)
             );
@@ -416,8 +421,8 @@ mod tests {
         ];
 
         for (token_type, left, right, result) in data {
-            let expr = Binary {
-                left: Box::new(Literal {
+            let expr = Expression::Binary {
+                left: Box::new(Expression::Literal {
                     value: TokenLiteral::Number(left),
                 }),
                 operator: Token {
@@ -426,7 +431,7 @@ mod tests {
                     lexeme: String::new(),
                     literal: None,
                 },
-                right: Box::new(Literal {
+                right: Box::new(Expression::Literal {
                     value: TokenLiteral::Number(right),
                 }),
             };
@@ -436,8 +441,8 @@ mod tests {
 
     #[test]
     fn interpret_strings_addition() {
-        let expr = Binary {
-            left: Box::new(Literal {
+        let expr = Expression::Binary {
+            left: Box::new(Expression::Literal {
                 value: TokenLiteral::String("foo".to_owned()),
             }),
             operator: Token {
@@ -446,7 +451,7 @@ mod tests {
                 lexeme: "+".to_owned(),
                 literal: None,
             },
-            right: Box::new(Literal {
+            right: Box::new(Expression::Literal {
                 value: TokenLiteral::String("bar".to_owned()),
             }),
         };
@@ -540,19 +545,34 @@ mod tests {
         ];
 
         for (left, right, true_result) in data {
-            let mut expr = Binary {
-                left: Box::new(Literal { value: left }),
-                operator: Token {
-                    t: TokenType::EqualEqual,
-                    line: 1,
-                    lexeme: String::new(),
-                    literal: None,
-                },
-                right: Box::new(Literal { value: right }),
+            let operator = Token {
+                t: TokenType::EqualEqual,
+                line: 1,
+                lexeme: String::new(),
+                literal: None,
+            };
+            let expr = Expression::Binary {
+                left: Box::new(Expression::Literal {
+                    value: left.clone(),
+                }),
+                operator,
+                right: Box::new(Expression::Literal {
+                    value: right.clone(),
+                }),
             };
             assert_eq!(Ok(Value::Boolean(true_result)), interpret(&expr));
 
-            expr.operator.t = TokenType::BangEqual;
+            let operator = Token {
+                t: TokenType::BangEqual,
+                line: 1,
+                lexeme: String::new(),
+                literal: None,
+            };
+            let expr = Expression::Binary {
+                left: Box::new(Expression::Literal { value: left }),
+                operator,
+                right: Box::new(Expression::Literal { value: right }),
+            };
             assert_eq!(Ok(Value::Boolean(!true_result)), interpret(&expr));
         }
     }

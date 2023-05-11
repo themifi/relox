@@ -20,7 +20,7 @@ impl Lox {
         let tokens = self.scanner.scan_tokens(source)?;
         let expression = parser::parse(tokens)?;
         self.interpreter
-            .interpret(expression.as_ref())
+            .interpret(&expression)
             .map_err(|e| e.into())
     }
 }

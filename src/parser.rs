@@ -1,6 +1,6 @@
 use super::{
     error::format_error,
-    expression::{Binary, Expression, Grouping, Literal, Unary},
+    expression::Expression,
     token::{Token, TokenType},
 };
 use std::fmt;
@@ -18,7 +18,7 @@ fn parse_with_reader(reader: &mut Reader) -> Result {
     result
 }
 
-type Result = std::result::Result<Box<dyn Expression>, Error>;
+type Result = std::result::Result<Expression, Error>;
 
 fn expression(reader: &mut Reader) -> Result {
     equality(reader)
@@ -30,11 +30,11 @@ fn equality(reader: &mut Reader) -> Result {
     while let Some(TokenType::BangEqual) | Some(TokenType::EqualEqual) = reader.peek_type() {
         let operator = reader.advance().unwrap();
         let right = comparsion(reader)?;
-        expr = Box::new(Binary {
-            left: expr,
+        expr = Expression::Binary {
+            left: Box::new(expr),
             operator,
-            right,
-        });
+            right: Box::new(right),
+        };
     }
 
     Ok(expr)
@@ -50,11 +50,11 @@ fn comparsion(reader: &mut Reader) -> Result {
     {
         let operator = reader.advance().unwrap();
         let right = term(reader)?;
-        expr = Box::new(Binary {
-            left: expr,
+        expr = Expression::Binary {
+            left: Box::new(expr),
             operator,
-            right,
-        });
+            right: Box::new(right),
+        };
     }
 
     Ok(expr)
@@ -66,11 +66,11 @@ fn term(reader: &mut Reader) -> Result {
     while let Some(TokenType::Minus) | Some(TokenType::Plus) = reader.peek_type() {
         let operator = reader.advance().unwrap();
         let right = factor(reader)?;
-        expr = Box::new(Binary {
-            left: expr,
+        expr = Expression::Binary {
+            left: Box::new(expr),
             operator,
-            right,
-        });
+            right: Box::new(right),
+        };
     }
 
     Ok(expr)
@@ -82,11 +82,11 @@ fn factor(reader: &mut Reader) -> Result {
     while let Some(TokenType::Slash) | Some(TokenType::Star) = reader.peek_type() {
         let operator = reader.advance().unwrap();
         let right = unary(reader)?;
-        expr = Box::new(Binary {
-            left: expr,
+        expr = Expression::Binary {
+            left: Box::new(expr),
             operator,
-            right,
-        });
+            right: Box::new(right),
+        };
     }
 
     Ok(expr)
@@ -97,7 +97,10 @@ fn unary(reader: &mut Reader) -> Result {
         Some(TokenType::Bang) | Some(TokenType::Minus) => {
             let operator = reader.advance().unwrap();
             let right = unary(reader)?;
-            let expr = Box::new(Unary { operator, right });
+            let expr = Expression::Unary {
+                operator,
+                right: Box::new(right),
+            };
             Ok(expr)
         }
         _ => primary(reader),
@@ -112,9 +115,9 @@ fn primary(reader: &mut Reader) -> Result {
         | Some(TokenType::Number)
         | Some(TokenType::String) => {
             let token = reader.advance().unwrap();
-            let expr = Box::new(Literal {
+            let expr = Expression::Literal {
                 value: token.literal.unwrap(),
-            });
+            };
             Ok(expr)
         }
         Some(TokenType::LeftParen) => {
@@ -126,7 +129,9 @@ fn primary(reader: &mut Reader) -> Result {
                     line: reader.line(),
                 });
             }
-            Ok(Box::new(Grouping { expr }))
+            Ok(Expression::Grouping {
+                expr: Box::new(expr),
+            })
         }
         None => Err(Error::ExpressionExpected {
             line: reader.line(),

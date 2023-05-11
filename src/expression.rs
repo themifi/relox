@@ -1,87 +1,60 @@
-use crate::error::RuntimeError;
-
-use super::{token::Literal as TokenLiteral, token::Token, value::Value};
+use super::{token::Literal as TokenLiteral, token::Token};
 use std::fmt;
 
 #[derive(Debug)]
-pub struct Binary {
-    pub left: Box<dyn Expression>,
-    pub operator: Token,
-    pub right: Box<dyn Expression>,
+pub enum Expression {
+    Binary {
+        left: Box<Expression>,
+        operator: Token,
+        right: Box<Expression>,
+    },
+    Grouping {
+        expr: Box<Expression>,
+    },
+    Literal {
+        value: TokenLiteral,
+    },
+    Unary {
+        operator: Token,
+        right: Box<Expression>,
+    },
 }
 
-#[derive(Debug)]
-pub struct Grouping {
-    pub expr: Box<dyn Expression>,
-}
-
-#[derive(Debug)]
-pub struct Literal {
-    pub value: TokenLiteral,
-}
-
-#[derive(Debug)]
-pub struct Unary {
-    pub operator: Token,
-    pub right: Box<dyn Expression>,
-}
-
-pub trait Expression: fmt::Display + fmt::Debug {
-    fn accept(&self, visitor: &dyn Visitor) -> Result<Value, RuntimeError>;
+pub fn walk_expr<V: Visitor>(expr: &Expression, v: &V) -> V::Result {
+    match expr {
+        Expression::Binary {
+            left,
+            operator,
+            right,
+        } => v.visit_binary(left, operator, right),
+        Expression::Grouping { expr } => v.visit_grouping(expr),
+        Expression::Literal { value } => v.visit_literal(value),
+        Expression::Unary { operator, right } => v.visit_unary(operator, right),
+    }
 }
 
 pub trait Visitor {
-    fn visit_binary(&self, binary: &Binary) -> Result<Value, RuntimeError>;
-    fn visit_grouping(&self, grouping: &Grouping) -> Result<Value, RuntimeError>;
-    fn visit_literal(&self, literal: &Literal) -> Result<Value, RuntimeError>;
-    fn visit_unary(&self, unary: &Unary) -> Result<Value, RuntimeError>;
+    type Result;
+
+    fn visit_binary(&self, left: &Expression, operator: &Token, right: &Expression)
+        -> Self::Result;
+    fn visit_grouping(&self, expr: &Expression) -> Self::Result;
+    fn visit_literal(&self, value: &TokenLiteral) -> Self::Result;
+    fn visit_unary(&self, operator: &Token, right: &Expression) -> Self::Result;
 }
 
-impl Expression for Binary {
-    fn accept(&self, visitor: &dyn Visitor) -> Result<Value, RuntimeError> {
-        visitor.visit_binary(self)
-    }
-}
-
-impl Expression for Grouping {
-    fn accept(&self, visitor: &dyn Visitor) -> Result<Value, RuntimeError> {
-        visitor.visit_grouping(self)
-    }
-}
-
-impl Expression for Literal {
-    fn accept(&self, visitor: &dyn Visitor) -> Result<Value, RuntimeError> {
-        visitor.visit_literal(self)
-    }
-}
-
-impl Expression for Unary {
-    fn accept(&self, visitor: &dyn Visitor) -> Result<Value, RuntimeError> {
-        visitor.visit_unary(self)
-    }
-}
-
-impl fmt::Display for Binary {
+impl fmt::Display for Expression {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "({} {} {})", self.operator.t, self.left, self.right)
-    }
-}
-
-impl fmt::Display for Grouping {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "(group {})", self.expr)
-    }
-}
-
-impl fmt::Display for Literal {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.value)
-    }
-}
-
-impl fmt::Display for Unary {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "({} {})", self.operator.t, self.right)
+        match self {
+            Expression::Binary {
+                left,
+                operator,
+                right,
+            } => write!(f, "({} {} {})", operator.t, left, right),
+            Expression::Grouping { expr } => write!(f, "(group {})", expr.as_ref()),
+            Expression::Literal { value } => write!(f, "{}", value),
+            Expression::Unary { operator, right } => write!(f, "({} {})", operator.t, right),
+        }
     }
 }
 
@@ -92,8 +65,8 @@ mod tests {
 
     #[test]
     fn test_format_binary() {
-        let expr = Binary {
-            left: Box::new(Literal {
+        let expr = Expression::Binary {
+            left: Box::new(Expression::Literal {
                 value: TokenLiteral::Number(2.0),
             }),
             operator: Token {
@@ -102,7 +75,7 @@ mod tests {
                 literal: None,
                 line: 1,
             },
-            right: Box::new(Literal {
+            right: Box::new(Expression::Literal {
                 value: TokenLiteral::Number(4.0),
             }),
         };
@@ -111,8 +84,8 @@ mod tests {
 
     #[test]
     fn test_format_grouping() {
-        let expr = Grouping {
-            expr: Box::new(Literal {
+        let expr = Expression::Grouping {
+            expr: Box::new(Expression::Literal {
                 value: TokenLiteral::Number(2.0),
             }),
         };
@@ -121,7 +94,7 @@ mod tests {
 
     #[test]
     fn test_format_literal() {
-        let expr = Literal {
+        let expr = Expression::Literal {
             value: TokenLiteral::Identifier("foo".to_owned()),
         };
         assert_eq!("foo", format!("{}", expr));
@@ -129,14 +102,14 @@ mod tests {
 
     #[test]
     fn test_format_unary() {
-        let expr = Unary {
+        let expr = Expression::Unary {
             operator: Token {
                 t: TokenType::Minus,
                 lexeme: String::new(),
                 literal: None,
                 line: 1,
             },
-            right: Box::new(Literal {
+            right: Box::new(Expression::Literal {
                 value: TokenLiteral::Number(2.0),
             }),
         };
@@ -145,15 +118,15 @@ mod tests {
 
     #[test]
     fn test_format_composite_expression() {
-        let expr = Binary {
-            left: Box::new(Unary {
+        let expr = Expression::Binary {
+            left: Box::new(Expression::Unary {
                 operator: Token {
                     t: TokenType::Minus,
                     lexeme: String::new(),
                     literal: None,
                     line: 1,
                 },
-                right: Box::new(Literal {
+                right: Box::new(Expression::Literal {
                     value: TokenLiteral::Number(123.0),
                 }),
             }),
@@ -163,8 +136,8 @@ mod tests {
                 literal: None,
                 line: 1,
             },
-            right: Box::new(Grouping {
-                expr: Box::new(Literal {
+            right: Box::new(Expression::Grouping {
+                expr: Box::new(Expression::Literal {
                     value: TokenLiteral::Number(45.67),
                 }),
             }),
