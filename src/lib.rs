@@ -25,6 +25,15 @@ pub fn run_file(file: String) {
     }
 }
 
+pub fn dump_file_ast(file: String) {
+    let text = fs::read_to_string(file).expect("file read failed");
+    let lox = lox::Lox::new();
+    match lox.dump_ast(text) {
+        Ok(value) => println!("{}", value),
+        Err(e) => eprintln!("{}", e),
+    }
+}
+
 pub fn run_prompt() {
     let stdin = io::stdin();
     loop {
