@@ -587,6 +587,36 @@ mod tests {
     }
 
     #[test]
+    fn test_real_number_invalid_tenth() {
+        let scanner = Scanner::new();
+        let source = "123.".to_owned();
+
+        assert_eq!(
+            Ok(vec![
+                Token {
+                    t: TokenType::Number,
+                    line: 1,
+                    lexeme: "123".to_owned(),
+                    literal: Some(Literal::Number(123.0)),
+                },
+                Token {
+                    t: TokenType::Dot,
+                    line: 1,
+                    lexeme: ".".to_owned(),
+                    literal: None,
+                },
+                Token {
+                    t: TokenType::Eof,
+                    line: 1,
+                    lexeme: String::new(),
+                    literal: None,
+                }
+            ]),
+            scanner.scan_tokens(source)
+        );
+    }
+
+    #[test]
     fn test_identifiers() {
         let scanner = Scanner::new();
         let source = "foo bar".to_owned();
@@ -794,4 +824,5 @@ mod tests {
             format!("{}", Error::UnexpectedCharacterError { line: 4, c: '%' })
         );
     }
+
 }
