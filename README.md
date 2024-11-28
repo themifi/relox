@@ -18,6 +18,26 @@ More description [in the book](https://www.craftinginterpreters.com/the-lox-lang
 
 # [Try online](https://themifi.github.io/relox/)
 
+# Usage
+
+Run from source code:
+```
+cargo run -- run ./examples/expression.lox
+-5617.41
+```
+
+Run as REPL:
+```
+> -123 * (45.67);
+-5617.41
+```
+
+Dump AST:
+```
+cargo run -- ast ./examples/expression.lox
+(* (- 123) (group 45.67))
+```
+
 ## Components
 
 - [x] Tree-walk interpreter
