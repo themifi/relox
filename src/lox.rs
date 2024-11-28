@@ -31,6 +31,7 @@ impl Lox {
     }
 }
 
+#[derive(Debug, PartialEq)]
 pub enum Error {
     Scan(scanner::Error),
     Parse(parser::Error),
@@ -62,5 +63,17 @@ impl fmt::Display for Error {
             Self::Parse(e) => write!(f, "{}", e),
             Self::Runtime(e) => write!(f, "{}", e),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_run_expression_calculator() {
+        let lox = Lox::new();
+        let result = lox.run("1 - (2 * 3) < 4 == true".to_string());
+        assert_eq!(result, Ok(Value::Boolean(true)));
     }
 }
