@@ -824,5 +824,4 @@ mod tests {
             format!("{}", Error::UnexpectedCharacterError { line: 4, c: '%' })
         );
     }
-
 }
