@@ -19,7 +19,7 @@ jobs:
         run: cargo build --release
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: relox-linux
           path: target/release/relox
@@ -36,7 +36,7 @@ jobs:
         run: cargo build --release
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: relox-windows
           path: target/release/relox.exe
@@ -53,7 +53,7 @@ jobs:
         run: cargo build --release
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: relox-apple
           path: target/release/relox
