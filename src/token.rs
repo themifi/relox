@@ -158,7 +158,7 @@ mod tests {
     }
 
     #[test]
-    fn token_display() {
+    fn display_number() {
         assert_eq!(
             "number 2.3",
             format!(

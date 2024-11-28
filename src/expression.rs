@@ -124,7 +124,7 @@ mod tests {
                 value: TokenLiteral::Number(4.0),
             }),
         };
-        assert_eq!(r"(+ 2 4)", format!("{}", expr));
+        assert_eq!("(+ 2 4)", format!("{}", expr));
     }
 
     #[test]
@@ -134,7 +134,7 @@ mod tests {
                 value: TokenLiteral::Number(2.0),
             }),
         };
-        assert_eq!(r"(group 2)", format!("{}", expr));
+        assert_eq!("(group 2)", format!("{}", expr));
     }
 
     #[test]
@@ -187,7 +187,7 @@ mod tests {
                 }),
             }),
         };
-        assert_eq!(r#"(* (- 123) (group 45.67))"#, format!("{}", expr));
+        assert_eq!("(* (- 123) (group 45.67))", format!("{}", expr));
     }
 
     #[test]
